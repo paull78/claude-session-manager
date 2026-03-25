@@ -42,7 +42,7 @@ function resolveSlug(cwd) {
 
 /**
  * Convert absolute path to Claude's project encoding.
- * /Users/paolo/code/b4 -> -Users-paolo-code-b4
+ * /home/user/projects/my-app -> -home-user-projects-my-app
  */
 function encodePath(absPath) {
   return absPath.replace(/\//g, "-");

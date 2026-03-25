@@ -23,7 +23,7 @@ When working across multiple copies of a repo (e.g., `b4`, `b4-2`, `b4-3`) with 
   "extraKnownMarketplaces": [
     {
       "name": "claude-session-manager",
-      "sourceUrl": "https://raw.githubusercontent.com/paoloricciuti/claude-session-manager/main/package.json"
+      "sourceUrl": "https://raw.githubusercontent.com/paull78/claude-session-manager/main/package.json"
     }
   ]
 }

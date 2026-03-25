@@ -1,3 +1,25 @@
+# Dependencies
 node_modules/
-*.tmp
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temp files
+*.tmp
+*.bak
+
+# Environment / secrets
+.env
+.env.*
+
+# Claude Code local data (never commit user session data)
+.claude/
+.superpowers/

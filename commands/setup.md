@@ -21,10 +21,10 @@ You are setting up the claude-session-manager plugin for the user. This creates 
    {
      "autoTrack": true,
      "repos": {
-       "b4": { "path": "/Users/paolo/code/b4", "group": "b4" },
-       "b4-2": { "path": "/Users/paolo/code/b4-2", "group": "b4" },
-       "b4-3": { "path": "/Users/paolo/code/b4-3", "group": "b4" },
-       "bais": { "path": "/Users/paolo/code/bais" }
+       "my-app": { "path": "/home/user/code/my-app", "group": "my-app" },
+       "my-app-2": { "path": "/home/user/code/my-app-2", "group": "my-app" },
+       "my-app-3": { "path": "/home/user/code/my-app-3", "group": "my-app" },
+       "other-project": { "path": "/home/user/code/other-project" }
      }
    }
    ```
