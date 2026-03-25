@@ -10,13 +10,12 @@
 const {
   resolveSlug,
   getCurrentSessionId,
-  findSessionJSONLPath,
+  findJSONLForCwd,
   tailJSONL,
   findPlanReferences,
   extractSummary,
   hasTaskCreate,
   updateSessionJson,
-  readSessionJson,
 } = require("./utils");
 
 function main() {
@@ -40,8 +39,8 @@ function main() {
   const jsonlPath = findJSONLForCwd(cwd);
   if (!jsonlPath) return;
 
-  // 5. Read last 5 assistant messages
-  const messages = tailJSONL(jsonlPath, 20); // read more lines to ensure we get ~5 assistant msgs
+  // 5. Read last ~5 assistant messages (read 20 raw lines since many are non-assistant)
+  const messages = tailJSONL(jsonlPath, 20);
 
   if (messages.length === 0) return;
 
@@ -58,7 +57,7 @@ function main() {
   }
 
   if (planRefs.length > 0) {
-    updates.planFile = planRefs[0]; // Use first plan reference found
+    updates.planFile = planRefs[0];
   }
 
   if (taskCreated) {
@@ -68,43 +67,6 @@ function main() {
   // Only write if we have something to update
   if (Object.keys(updates).length > 0) {
     updateSessionJson(slug, sessionId, updates);
-  }
-}
-
-/**
- * Find the most recently modified JSONL file in the Claude projects directory
- * for the given CWD. This is more robust than trying to match session IDs,
- * since Claude's session ID differs from our plugin's session ID.
- */
-function findJSONLForCwd(cwd) {
-  const path = require("path");
-  const fs = require("fs");
-  const { encodePath, CLAUDE_DIR } = require("./utils");
-
-  const encoded = encodePath(cwd);
-  const projectDir = path.join(CLAUDE_DIR, "projects", encoded);
-
-  try {
-    if (!fs.existsSync(projectDir)) return null;
-
-    const files = fs.readdirSync(projectDir)
-      .filter((f) => f.endsWith(".jsonl"))
-      .map((f) => {
-        const fullPath = path.join(projectDir, f);
-        try {
-          const stat = fs.statSync(fullPath);
-          return { path: fullPath, mtime: stat.mtimeMs };
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.mtime - a.mtime);
-
-    // Return the most recently modified JSONL file
-    return files.length > 0 ? files[0].path : null;
-  } catch {
-    return null;
   }
 }
 

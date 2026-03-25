@@ -183,7 +183,7 @@ function readAllJSONL(filePath) {
 }
 
 /**
- * Find the JSONL transcript path for a session.
+ * Find the JSONL transcript path for a session by exact sessionId.
  * Looks at ~/.claude/projects/{encodedPath}/{sessionId}.jsonl
  */
 function findSessionJSONLPath(cwd, sessionId) {
@@ -193,6 +193,38 @@ function findSessionJSONLPath(cwd, sessionId) {
     return jsonlPath;
   }
   return null;
+}
+
+/**
+ * Find the most recently modified JSONL file in the Claude projects directory
+ * for the given CWD. More robust than exact sessionId matching since Claude's
+ * internal session ID differs from our plugin's session ID.
+ */
+function findJSONLForCwd(cwd) {
+  const encoded = encodePath(cwd);
+  const projectDir = path.join(CLAUDE_DIR, "projects", encoded);
+
+  try {
+    if (!fs.existsSync(projectDir)) return null;
+
+    const files = fs.readdirSync(projectDir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => {
+        const fullPath = path.join(projectDir, f);
+        try {
+          const stat = fs.statSync(fullPath);
+          return { path: fullPath, mtime: stat.mtimeMs };
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.mtime - a.mtime);
+
+    return files.length > 0 ? files[0].path : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -482,6 +514,7 @@ module.exports = {
   tailJSONL,
   readAllJSONL,
   findSessionJSONLPath,
+  findJSONLForCwd,
   findPlanReferences,
   extractDecisions,
   getTaskSummary,
