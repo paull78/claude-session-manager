@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# SessionStart hook for claude-session-manager plugin
+# This runs synchronously — must be fast (~50ms target)
+
+set -euo pipefail
+
+# Determine plugin root directory
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source shared library
+# shellcheck source=lib.sh
+source "${SCRIPT_DIR}/lib.sh"
+
+CWD="$(pwd)"
+
+# Check if we're in a git repo; if not, exit silently with empty JSON
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Resolve repo slug from CWD
+SLUG=$(resolve_slug "$CWD")
+if [ -z "$SLUG" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Get git info
+# Use a temp var to avoid the case where git outputs partial stdout before failing
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || BRANCH="unknown"
+LAST_COMMIT=$(git log --oneline -1 --no-decorate 2>/dev/null) || LAST_COMMIT=""
+COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null) || COMMIT_HASH=""
+
+# Generate session ID (16 hex chars)
+SESSION_ID=$(head -c 8 /dev/urandom | xxd -p | head -c 16)
+
+# ISO timestamp
+STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Ensure session directory exists
+REPOS_DIR="$SESSION_MANAGER_DIR/repos/$SLUG"
+ensure_dir "$REPOS_DIR/sessions"
+ensure_dir "$REPOS_DIR/briefings"
+ensure_dir "$REPOS_DIR/projects"
+
+# Create session JSON
+SESSION_FILE="$REPOS_DIR/sessions/${SESSION_ID}.json"
+printf '{\n' > "$SESSION_FILE"
+printf '  "sessionId": "%s",\n' "$SESSION_ID" >> "$SESSION_FILE"
+printf '  "repoSlug": "%s",\n' "$SLUG" >> "$SESSION_FILE"
+printf '  "repoPath": "%s",\n' "$(escape_for_json "$CWD")" >> "$SESSION_FILE"
+printf '  "branch": "%s",\n' "$(escape_for_json "$BRANCH")" >> "$SESSION_FILE"
+printf '  "startedAt": "%s",\n' "$STARTED_AT" >> "$SESSION_FILE"
+printf '  "endedAt": null,\n' >> "$SESSION_FILE"
+printf '  "startCommit": "%s",\n' "$COMMIT_HASH" >> "$SESSION_FILE"
+printf '  "endCommit": null,\n' >> "$SESSION_FILE"
+printf '  "commitCount": 0,\n' >> "$SESSION_FILE"
+printf '  "projectSlug": null,\n' >> "$SESSION_FILE"
+printf '  "notes": [],\n' >> "$SESSION_FILE"
+printf '  "tags": [],\n' >> "$SESSION_FILE"
+printf '  "summary": null,\n' >> "$SESSION_FILE"
+printf '  "planFile": null,\n' >> "$SESSION_FILE"
+printf '  "keyDecisions": []\n' >> "$SESSION_FILE"
+printf '}\n' >> "$SESSION_FILE"
+
+# Write current session marker so stop/end hooks can find it
+printf '%s' "$SESSION_ID" > "$SESSION_MANAGER_DIR/.current-session-${SLUG}"
+
+# Look for active project matching this branch
+PROJECT_SLUG=$(get_active_project "$SLUG" "$BRANCH")
+PROJECT_TITLE=""
+
+if [ -n "$PROJECT_SLUG" ]; then
+  PROJECT_FILE="$REPOS_DIR/projects/${PROJECT_SLUG}.json"
+  PROJECT_TITLE=$(read_json_field "$PROJECT_FILE" "title")
+  if [ -z "$PROJECT_TITLE" ]; then
+    PROJECT_TITLE="$PROJECT_SLUG"
+  fi
+  # Update session with project slug
+  sed -i.bak 's/"projectSlug": null/"projectSlug": "'"$PROJECT_SLUG"'"/' "$SESSION_FILE" && rm -f "${SESSION_FILE}.bak"
+fi
+
+# Check for existing briefing
+BRIEFING_PATH="$REPOS_DIR/briefings/latest.md"
+HAS_BRIEFING=0
+if [ -f "$BRIEFING_PATH" ]; then
+  HAS_BRIEFING=1
+fi
+
+# Check for prior sessions on this branch
+HAS_PRIOR_SESSIONS=0
+if [ -d "$REPOS_DIR/sessions" ]; then
+  # Count session files (excluding the one we just created)
+  local_count=0
+  for sf in "$REPOS_DIR/sessions"/*.json; do
+    [ -f "$sf" ] || continue
+    if [ "$sf" = "$SESSION_FILE" ]; then
+      continue
+    fi
+    # Check if this session is on the same branch
+    if grep -q "\"branch\": \"$BRANCH\"" "$sf" 2>/dev/null; then
+      local_count=$((local_count + 1))
+    fi
+  done
+  if [ "$local_count" -gt 0 ]; then
+    HAS_PRIOR_SESSIONS=1
+  fi
+fi
+
+# Build context message
+CONTEXT=""
+
+if [ "$HAS_BRIEFING" -eq 1 ] && [ -n "$PROJECT_SLUG" ]; then
+  CONTEXT="You are resuming work on project '${PROJECT_TITLE}' in ${SLUG} on branch \`${BRANCH}\`. A resume briefing is available -- read it at \`${BRIEFING_PATH}\` for full context including progress, decisions, and next steps."
+elif [ "$HAS_PRIOR_SESSIONS" -eq 1 ]; then
+  CONTEXT="Prior sessions found for branch \`${BRANCH}\` in ${SLUG}. Run \`/claude-session-manager:resume\` for full context."
+else
+  CONTEXT="Session tracked for ${SLUG} on \`${BRANCH}\`."
+fi
+
+# Emit the context
+emit_context "$CONTEXT"
+
+exit 0
