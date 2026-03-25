@@ -28,7 +28,8 @@ if %ERRORLEVEL% equ 0 (
     exit /b %ERRORLEVEL%
 )
 
-exit /b 0
+echo run-hook.cmd: no bash found; install Git for Windows >&2
+exit /b 1
 CMDBLOCK
 
 # Unix: run the named script directly

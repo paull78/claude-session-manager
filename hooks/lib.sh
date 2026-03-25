@@ -138,10 +138,15 @@ resolve_slug() {
     fi
   done < "$CONFIG_FILE"
 
-  # Write new config
+  # Preserve existing autoTrack value (defaults to true)
+  local auto_track_value
+  auto_track_value=$(read_json_field "$CONFIG_FILE" "autoTrack")
+  auto_track_value="${auto_track_value:-true}"
+
+  # Write new config with escaped path
   {
     printf '{\n'
-    printf '  "autoTrack": true,\n'
+    printf '  "autoTrack": %s,\n' "$auto_track_value"
     printf '  "repos": {\n'
     if [ -n "$existing_repos" ]; then
       # Trim trailing newline and add comma
@@ -149,7 +154,7 @@ resolve_slug() {
       printf '\n'
     fi
     printf '    "%s": {\n' "$new_slug"
-    printf '      "path": "%s"\n' "$cwd"
+    printf '      "path": "%s"\n' "$(escape_for_json "$cwd")"
     printf '    }\n'
     printf '  }\n'
     printf '}\n'

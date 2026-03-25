@@ -28,13 +28,11 @@ if [ -z "$SLUG" ]; then
 fi
 
 # Get git info
-# Use a temp var to avoid the case where git outputs partial stdout before failing
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || BRANCH="unknown"
-LAST_COMMIT=$(git log --oneline -1 --no-decorate 2>/dev/null) || LAST_COMMIT=""
 COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null) || COMMIT_HASH=""
 
-# Generate session ID (16 hex chars)
-SESSION_ID=$(head -c 8 /dev/urandom | xxd -p | head -c 16)
+# Generate session ID (16 hex chars, portable — no xxd dependency)
+SESSION_ID=$(od -An -tx1 -N8 /dev/urandom | tr -d ' \n' | head -c 16)
 
 # ISO timestamp
 STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -45,30 +43,7 @@ ensure_dir "$REPOS_DIR/sessions"
 ensure_dir "$REPOS_DIR/briefings"
 ensure_dir "$REPOS_DIR/projects"
 
-# Create session JSON
-SESSION_FILE="$REPOS_DIR/sessions/${SESSION_ID}.json"
-printf '{\n' > "$SESSION_FILE"
-printf '  "sessionId": "%s",\n' "$SESSION_ID" >> "$SESSION_FILE"
-printf '  "repoSlug": "%s",\n' "$SLUG" >> "$SESSION_FILE"
-printf '  "repoPath": "%s",\n' "$(escape_for_json "$CWD")" >> "$SESSION_FILE"
-printf '  "branch": "%s",\n' "$(escape_for_json "$BRANCH")" >> "$SESSION_FILE"
-printf '  "startedAt": "%s",\n' "$STARTED_AT" >> "$SESSION_FILE"
-printf '  "endedAt": null,\n' >> "$SESSION_FILE"
-printf '  "startCommit": "%s",\n' "$COMMIT_HASH" >> "$SESSION_FILE"
-printf '  "endCommit": null,\n' >> "$SESSION_FILE"
-printf '  "commitCount": 0,\n' >> "$SESSION_FILE"
-printf '  "projectSlug": null,\n' >> "$SESSION_FILE"
-printf '  "notes": [],\n' >> "$SESSION_FILE"
-printf '  "tags": [],\n' >> "$SESSION_FILE"
-printf '  "summary": null,\n' >> "$SESSION_FILE"
-printf '  "planFile": null,\n' >> "$SESSION_FILE"
-printf '  "keyDecisions": []\n' >> "$SESSION_FILE"
-printf '}\n' >> "$SESSION_FILE"
-
-# Write current session marker so stop/end hooks can find it
-printf '%s' "$SESSION_ID" > "$SESSION_MANAGER_DIR/.current-session-${SLUG}"
-
-# Look for active project matching this branch
+# Look for active project BEFORE writing session file (so we can include projectSlug)
 PROJECT_SLUG=$(get_active_project "$SLUG" "$BRANCH")
 PROJECT_TITLE=""
 
@@ -78,9 +53,38 @@ if [ -n "$PROJECT_SLUG" ]; then
   if [ -z "$PROJECT_TITLE" ]; then
     PROJECT_TITLE="$PROJECT_SLUG"
   fi
-  # Update session with project slug
-  sed -i.bak 's/"projectSlug": null/"projectSlug": "'"$PROJECT_SLUG"'"/' "$SESSION_FILE" && rm -f "${SESSION_FILE}.bak"
 fi
+
+# Write projectSlug as either "slug" or null
+PROJECT_SLUG_JSON="null"
+if [ -n "$PROJECT_SLUG" ]; then
+  PROJECT_SLUG_JSON="\"$(escape_for_json "$PROJECT_SLUG")\""
+fi
+
+# Create session JSON (single write, no sed patching)
+SESSION_FILE="$REPOS_DIR/sessions/${SESSION_ID}.json"
+cat > "$SESSION_FILE" <<ENDJSON
+{
+  "sessionId": "${SESSION_ID}",
+  "repoSlug": "$(escape_for_json "$SLUG")",
+  "repoPath": "$(escape_for_json "$CWD")",
+  "branch": "$(escape_for_json "$BRANCH")",
+  "startedAt": "${STARTED_AT}",
+  "endedAt": null,
+  "startCommit": "${COMMIT_HASH}",
+  "endCommit": null,
+  "commitCount": 0,
+  "projectSlug": ${PROJECT_SLUG_JSON},
+  "notes": [],
+  "tags": [],
+  "summary": null,
+  "planFile": null,
+  "keyDecisions": []
+}
+ENDJSON
+
+# Write current session marker so stop/end hooks can find it
+printf '%s' "$SESSION_ID" > "$SESSION_MANAGER_DIR/.current-session-${SLUG}"
 
 # Check for existing briefing
 BRIEFING_PATH="$REPOS_DIR/briefings/latest.md"
@@ -89,24 +93,18 @@ if [ -f "$BRIEFING_PATH" ]; then
   HAS_BRIEFING=1
 fi
 
-# Check for prior sessions on this branch
+# Check for prior sessions on this branch (quick check: just see if any other session files exist)
 HAS_PRIOR_SESSIONS=0
 if [ -d "$REPOS_DIR/sessions" ]; then
-  # Count session files (excluding the one we just created)
-  local_count=0
   for sf in "$REPOS_DIR/sessions"/*.json; do
     [ -f "$sf" ] || continue
-    if [ "$sf" = "$SESSION_FILE" ]; then
-      continue
-    fi
-    # Check if this session is on the same branch
-    if grep -q "\"branch\": \"$BRANCH\"" "$sf" 2>/dev/null; then
-      local_count=$((local_count + 1))
+    [ "$sf" = "$SESSION_FILE" ] && continue
+    # Quick grep for matching branch in the file
+    if grep -q "\"branch\": \"$(escape_for_json "$BRANCH")\"" "$sf" 2>/dev/null; then
+      HAS_PRIOR_SESSIONS=1
+      break  # Found one, no need to scan more
     fi
   done
-  if [ "$local_count" -gt 0 ]; then
-    HAS_PRIOR_SESSIONS=1
-  fi
 fi
 
 # Build context message
