@@ -199,6 +199,102 @@ get_active_project() {
   done
 }
 
+# Count sessions matching a branch in repos/{slug}/sessions/
+get_session_count() {
+  local slug="$1"
+  local branch="$2"
+  local sessions_dir="$SESSION_MANAGER_DIR/repos/$slug/sessions"
+  local count=0
+
+  if [ ! -d "$sessions_dir" ]; then
+    printf '0'
+    return
+  fi
+
+  for sf in "$sessions_dir"/*.json; do
+    [ -f "$sf" ] || continue
+    if grep -q "\"branch\": \"$(escape_for_json "$branch")\"" "$sf" 2>/dev/null; then
+      count=$((count + 1))
+    fi
+  done
+
+  printf '%s' "$count"
+}
+
+# Get the summary and startedAt from the most recent session on a branch
+# Outputs: summary|startedAt (pipe-delimited)
+get_latest_session_info() {
+  local slug="$1"
+  local branch="$2"
+  local current_session_file="${3:-}"
+  local sessions_dir="$SESSION_MANAGER_DIR/repos/$slug/sessions"
+
+  if [ ! -d "$sessions_dir" ]; then
+    return
+  fi
+
+  local latest_file=""
+  local latest_time=""
+
+  for sf in "$sessions_dir"/*.json; do
+    [ -f "$sf" ] || continue
+    [ "$sf" = "$current_session_file" ] && continue
+    if grep -q "\"branch\": \"$(escape_for_json "$branch")\"" "$sf" 2>/dev/null; then
+      local started
+      started=$(read_json_field "$sf" "startedAt")
+      if [ -z "$latest_time" ] || [[ "$started" > "$latest_time" ]]; then
+        latest_time="$started"
+        latest_file="$sf"
+      fi
+    fi
+  done
+
+  if [ -z "$latest_file" ]; then
+    return
+  fi
+
+  local summary
+  summary=$(read_json_field "$latest_file" "summary")
+  printf '%s|%s' "$summary" "$latest_time"
+}
+
+# Convert ISO timestamp to human-readable "time ago" string
+# Input: ISO 8601 timestamp (e.g., 2026-03-24T14:30:00Z)
+time_ago() {
+  local ts="$1"
+  if [ -z "$ts" ]; then
+    printf 'unknown'
+    return
+  fi
+
+  local now_epoch ts_epoch diff_secs
+  now_epoch=$(date -u +%s)
+
+  # Parse ISO timestamp to epoch (macOS date -j vs GNU date -d)
+  if date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s >/dev/null 2>&1; then
+    ts_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null)
+  elif date -d "$ts" +%s >/dev/null 2>&1; then
+    ts_epoch=$(date -d "$ts" +%s 2>/dev/null)
+  else
+    printf 'unknown'
+    return
+  fi
+
+  diff_secs=$((now_epoch - ts_epoch))
+
+  if [ "$diff_secs" -lt 60 ]; then
+    printf 'just now'
+  elif [ "$diff_secs" -lt 3600 ]; then
+    printf '%dm ago' $((diff_secs / 60))
+  elif [ "$diff_secs" -lt 86400 ]; then
+    printf '%dh ago' $((diff_secs / 3600))
+  elif [ "$diff_secs" -lt 172800 ]; then
+    printf 'yesterday'
+  else
+    printf '%dd ago' $((diff_secs / 86400))
+  fi
+}
+
 # Emit context JSON, detecting platform to use the right format
 # Uses printf instead of heredoc to avoid bash 5.3+ heredoc expansion bug
 emit_context() {

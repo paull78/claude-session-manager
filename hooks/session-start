@@ -86,6 +86,10 @@ ENDJSON
 # Write current session marker so stop/end hooks can find it
 printf '%s' "$SESSION_ID" > "$SESSION_MANAGER_DIR/.current-session-${SLUG}"
 
+# Read resume mode from config (default: "ask")
+RESUME_MODE=$(read_json_field "$CONFIG_FILE" "resumeMode")
+RESUME_MODE="${RESUME_MODE:-ask}"
+
 # Check for existing briefing
 BRIEFING_PATH="$REPOS_DIR/briefings/latest.md"
 HAS_BRIEFING=0
@@ -93,29 +97,78 @@ if [ -f "$BRIEFING_PATH" ]; then
   HAS_BRIEFING=1
 fi
 
-# Check for prior sessions on this branch (quick check: just see if any other session files exist)
+# Check for prior sessions on this branch (quick check)
 HAS_PRIOR_SESSIONS=0
 if [ -d "$REPOS_DIR/sessions" ]; then
   for sf in "$REPOS_DIR/sessions"/*.json; do
     [ -f "$sf" ] || continue
     [ "$sf" = "$SESSION_FILE" ] && continue
-    # Quick grep for matching branch in the file
     if grep -q "\"branch\": \"$(escape_for_json "$BRANCH")\"" "$sf" 2>/dev/null; then
       HAS_PRIOR_SESSIONS=1
-      break  # Found one, no need to scan more
+      break
     fi
   done
 fi
 
-# Build context message
+# Build context message based on resume mode
 CONTEXT=""
 
-if [ "$HAS_BRIEFING" -eq 1 ] && [ -n "$PROJECT_SLUG" ]; then
-  CONTEXT="You are resuming work on project '${PROJECT_TITLE}' in ${SLUG} on branch \`${BRANCH}\`. A resume briefing is available -- read it at \`${BRIEFING_PATH}\` for full context including progress, decisions, and next steps."
-elif [ "$HAS_PRIOR_SESSIONS" -eq 1 ]; then
-  CONTEXT="Prior sessions found for branch \`${BRANCH}\` in ${SLUG}. Run \`/claude-session-manager:resume\` for full context."
-else
+if [ "$RESUME_MODE" = "manual" ]; then
+  # Manual mode: only confirm tracking, never mention prior work
   CONTEXT="Session tracked for ${SLUG} on \`${BRANCH}\`."
+
+elif [ "$RESUME_MODE" = "auto" ]; then
+  # Auto mode: tell Claude to read the full briefing immediately
+  if [ "$HAS_BRIEFING" -eq 1 ] && [ -n "$PROJECT_SLUG" ]; then
+    CONTEXT="You are resuming work on project '${PROJECT_TITLE}' in ${SLUG} on branch \`${BRANCH}\`. A resume briefing is available -- read it at \`${BRIEFING_PATH}\` for full context including progress, decisions, and next steps."
+  elif [ "$HAS_PRIOR_SESSIONS" -eq 1 ]; then
+    CONTEXT="Prior sessions found for branch \`${BRANCH}\` in ${SLUG}. Run \`/claude-session-manager:resume\` for full context."
+  else
+    CONTEXT="Session tracked for ${SLUG} on \`${BRANCH}\`."
+  fi
+
+else
+  # Ask mode (default): inject a summary snippet, let Claude ask the user
+  if [ "$HAS_PRIOR_SESSIONS" -eq 1 ] || [ -n "$PROJECT_SLUG" ]; then
+    # Gather mini-summary for the ask prompt
+    SESSION_COUNT=$(get_session_count "$SLUG" "$BRANCH")
+    LATEST_INFO=$(get_latest_session_info "$SLUG" "$BRANCH" "$SESSION_FILE")
+    LAST_SUMMARY=""
+    LAST_TIME_AGO="unknown"
+
+    if [ -n "$LATEST_INFO" ]; then
+      LAST_SUMMARY="${LATEST_INFO%%|*}"
+      LAST_STARTED="${LATEST_INFO##*|}"
+      if [ -n "$LAST_STARTED" ]; then
+        LAST_TIME_AGO=$(time_ago "$LAST_STARTED")
+      fi
+    fi
+
+    # Build the project line
+    PROJECT_LINE=""
+    if [ -n "$PROJECT_SLUG" ]; then
+      PROJECT_LINE="- Project: \"${PROJECT_TITLE}\" (active)"
+    fi
+
+    # Build activity line
+    ACTIVITY_LINE=""
+    if [ -n "$LAST_SUMMARY" ]; then
+      ACTIVITY_LINE="- Last activity: \"${LAST_SUMMARY}\""
+    fi
+
+    CONTEXT="[claude-session-manager] Prior work detected on this branch:
+${PROJECT_LINE}
+- Branch: ${BRANCH}
+- Last session: ${LAST_TIME_AGO} (${SESSION_COUNT} total sessions on this branch)
+${ACTIVITY_LINE}
+
+Ask the user if they want to resume this work before proceeding.
+If they want to resume, read the full briefing at \`${BRIEFING_PATH}\`.
+If they want to start fresh, proceed with their request normally.
+Do not auto-load the briefing without asking."
+  else
+    CONTEXT="Session tracked for ${SLUG} on \`${BRANCH}\`."
+  fi
 fi
 
 # Emit the context

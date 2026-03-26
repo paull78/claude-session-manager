@@ -16,10 +16,17 @@ You are setting up the claude-session-manager plugin for the user. This creates 
 
 4. **Auto-detect groups**: For repos with `-1`, `-2`, `-3` etc. suffixes, suggest grouping them together. Ask the user to confirm. The group name is the base name (e.g., "b4" for b4, b4-2, b4-3).
 
-5. **Create the config**: Write `~/.claude/session-manager/config.json` with this structure:
+5. **Ask about resume behavior**: Use AskUserQuestion to ask:
+   "When you start a session on a branch where you've worked before, how should Claude handle it?"
+   - **Ask first (Recommended)**: Claude shows a quick summary and asks if you want to resume — set `resumeMode` to `"ask"`
+   - **Auto-load context**: Claude automatically loads the full resume briefing — set `resumeMode` to `"auto"`
+   - **Do nothing**: No auto-resume; you run `/claude-session-manager:resume` when you want context — set `resumeMode` to `"manual"`
+
+6. **Create the config**: Write `~/.claude/session-manager/config.json` with this structure:
    ```json
    {
      "autoTrack": true,
+     "resumeMode": "ask",
      "repos": {
        "my-app": { "path": "/home/user/code/my-app", "group": "my-app" },
        "my-app-2": { "path": "/home/user/code/my-app-2", "group": "my-app" },
@@ -29,9 +36,9 @@ You are setting up the claude-session-manager plugin for the user. This creates 
    }
    ```
 
-6. **Create directory structure**: For each tracked repo, create:
+7. **Create directory structure**: For each tracked repo, create:
    - `~/.claude/session-manager/repos/{slug}/sessions/`
    - `~/.claude/session-manager/repos/{slug}/projects/`
    - `~/.claude/session-manager/repos/{slug}/briefings/`
 
-7. **Confirm**: Tell the user setup is complete and that session tracking is now active. Mention they can run `/claude-session-manager:dashboard` to see status.
+8. **Confirm**: Tell the user setup is complete and that session tracking is now active. Mention they can run `/claude-session-manager:dashboard` to see status.
