@@ -214,7 +214,7 @@ The plugin registers three Claude Code hooks:
 
 ### Skills (Automatic)
 
-Three skills trigger automatically based on context:
+Four skills trigger automatically based on context:
 
 | Skill | Triggers when |
 |-------|--------------|
@@ -237,6 +237,7 @@ All data lives centrally at `~/.claude/session-manager/`:
 ```
 ~/.claude/session-manager/
   config.json                       # Tracked repos, groups, preferences
+  knowledge-index.json              # Cross-repo index of all takeaways (for knowledge search)
   repos/
     {repo-slug}/
       repo.json                     # Repo metadata

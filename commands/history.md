@@ -37,4 +37,4 @@ Show the full history of all tracked projects across all repos.
 Completed: {n} | Active: {n} | Paused: {n} | Total sessions: {n}
 ```
 
-6. **For completed projects with takeaways**: Mention that the user can read the takeaway at the file path.
+6. **For completed projects with takeaways**: Mention that the user can read the takeaway at the file path, or search across all takeaways with `/claude-session-manager:search-knowledge`.

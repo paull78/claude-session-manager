@@ -4,7 +4,16 @@ description: Resume a previous session with full context. Generates a briefing f
 
 # Resume Session
 
-You are helping the user resume work from a previous Claude Code session.
+You are helping the user resume work from a previous Claude Code session. This command can be invoked explicitly by the user, or the `resuming-a-session` skill may guide you here when the SessionStart hook detects prior work.
+
+## Context
+
+The plugin has three resume modes (configured via `resumeMode` in `~/.claude/session-manager/config.json`):
+- `"ask"` (default) — The SessionStart hook shows a summary and asks before loading. If the user agrees, you end up here.
+- `"auto"` — The hook tells you to read the briefing directly. You may already have context.
+- `"manual"` — The hook says nothing. The user runs this command explicitly when they want context.
+
+Regardless of mode, this command always generates a full briefing.
 
 ## Steps
 
@@ -29,6 +38,6 @@ You are helping the user resume work from a previous Claude Code session.
    - **Blockers**: anything noted
    - **Next Steps**: what to work on next
 
-6. **Save the briefing**: Write it to `~/.claude/session-manager/repos/{slug}/briefings/latest.md` for future auto-injection by the SessionStart hook.
+6. **Save the briefing**: Write it to `~/.claude/session-manager/repos/{slug}/briefings/latest.md` so the SessionStart hook can reference it in future sessions.
 
 7. **Ask**: "Would you like to continue from where the last session left off?"
