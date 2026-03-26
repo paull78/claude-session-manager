@@ -95,6 +95,7 @@ This walks you through:
 | `/claude-session-manager:note "text"` | Add a note to the current session (for decisions, context) |
 | `/claude-session-manager:history` | View all past projects with filters (`--active`, `--completed`, `--all`) |
 | `/claude-session-manager:close-project` | Mark project complete, generate takeaway, interactively distribute learnings |
+| `/claude-session-manager:search-knowledge` | Search past project takeaways for relevant patterns and lessons |
 
 ### Example: Dashboard
 
@@ -170,6 +171,32 @@ The takeaway is saved to the plugin folder. Then each section is presented one a
 
 You can also edit the content before confirming each section. Nothing is written to CLAUDE.md or memory without your explicit approval.
 
+The takeaway is also indexed in the knowledge base — searchable by future projects.
+
+### Example: Search Knowledge
+
+```
+/claude-session-manager:search-knowledge "pointer events drag"
+```
+
+Searches across all completed project takeaways for relevant patterns and lessons:
+
+```
+Found 2 past projects that might be relevant:
+
+1. "Icon Resize" (my-app-2, Mar 2026)
+   Tags: resize, drag, SVG, pointer-events, controls
+   → Takeaway has patterns for coordinate transforms and drag-based E2E testing
+
+2. "Canvas Pan/Zoom" (my-app, Jan 2026)
+   Tags: pointer-events, gesture, transform, viewport
+   → Takeaway has lessons about pointer capture and event delegation
+
+Load their takeaways? [Yes / Pick specific ones / No]
+```
+
+The knowledge search also triggers automatically as a skill when you start significant new work — Claude asks if you want to check past projects before diving in.
+
 ## How It Works
 
 ### Hooks (Automatic)
@@ -194,6 +221,7 @@ Three skills trigger automatically based on context:
 | `resuming-a-session` | Prior sessions detected on current branch |
 | `tracking-a-project` | User starts significant work, enters plan mode, or creates a PRD |
 | `generating-takeaways` | Project is marked complete |
+| `searching-past-knowledge` | Starting significant new work where past projects might be relevant |
 
 ### Agents
 

@@ -50,4 +50,18 @@ Mark the current project as completed and generate a takeaway document. Nothing 
      - Read the existing `MEMORY.md` in that directory (create if it doesn't exist)
      - Add a link to the new memory file in `MEMORY.md`
 
-8. **Confirm**: Summarize what was written where. Tell the user the full takeaway is always available at `~/.claude/session-manager/repos/{slug}/projects/{project-slug}.takeaway.md`.
+8. **Update the knowledge index**: Add an entry to `~/.claude/session-manager/knowledge-index.json` (create the file if it doesn't exist as an empty JSON array `[]`):
+   ```json
+   {
+     "project": "{project-slug}",
+     "repo": "{repo-slug}",
+     "completedAt": "{ISO timestamp}",
+     "summary": "{one-line summary from the takeaway's Summary section}",
+     "tags": ["{auto-extracted keywords}"],
+     "takeawayPath": "~/.claude/session-manager/repos/{slug}/projects/{project-slug}.takeaway.md"
+   }
+   ```
+
+   For tags, extract 5-15 key technical terms from the takeaway content: technologies, libraries, patterns, concepts, and problem domains. These are used for knowledge search in future projects.
+
+9. **Confirm**: Summarize what was written where. Tell the user the full takeaway is always available at the file path, and that it's now searchable via `/claude-session-manager:search-knowledge`.
