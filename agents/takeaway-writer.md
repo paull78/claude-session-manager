@@ -17,7 +17,7 @@ You will receive:
 
 ## Output
 
-Generate a markdown document with these sections:
+Generate a markdown document with these sections. Each section must be **self-contained** — it should make sense on its own because the user will decide independently where each section goes (CLAUDE.md, memory, or neither).
 
 ### Summary
 One paragraph describing what was built, why, and the scope. Include:
@@ -49,17 +49,16 @@ Specific code patterns, configurations, or setups worth templating:
 - Describe when to reuse them
 - Note any gotchas
 
-### Recommendations for CLAUDE.md
-Specific, actionable additions to the repo's CLAUDE.md:
-- New conventions that should be documented
-- Architecture decisions that affect future work
-- Testing patterns or requirements
-- Common pitfalls with specific guidance
+## Important
 
-Format each recommendation as a ready-to-paste section.
+- Do NOT suggest auto-appending anything to CLAUDE.md or memory files
+- Do NOT include a "Recommendations for CLAUDE.md" section — each section IS a potential recommendation; the user decides where it goes
+- Save the complete takeaway to the plugin folder only
+- The interactive distribution step happens AFTER you generate the takeaway — that's handled by the close-project command, not by you
 
 ## Guidelines
 - Be specific, not generic. "Test database queries with real connections" is good. "Write good tests" is worthless.
 - Focus on what's unique to THIS project and codebase
 - Keep it under 500 words total — this is a reference doc, not a novel
 - Reference specific files, functions, and patterns by name
+- Format each section so it reads well standalone (someone might only see one section in CLAUDE.md or memory)

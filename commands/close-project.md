@@ -1,10 +1,10 @@
 ---
-description: Mark the current project as completed and generate a structured takeaway with patterns, lessons, and CLAUDE.md recommendations.
+description: Mark the current project as completed and generate a structured takeaway with patterns, lessons, and reusable knowledge.
 ---
 
 # Close Project
 
-Mark the current project as completed and generate a takeaway document.
+Mark the current project as completed and generate a takeaway document. Nothing is written to CLAUDE.md or memory without explicit per-section approval.
 
 ## Steps
 
@@ -29,15 +29,25 @@ Mark the current project as completed and generate a takeaway document.
    - Check the repo's CLAUDE.md for existing conventions
 
 5. **Generate takeaway**: Write a structured post-mortem to `~/.claude/session-manager/repos/{slug}/projects/{project-slug}.takeaway.md` with these sections:
-
    - **Summary**: What was built, in one paragraph. Include session count and timespan.
-   - **Patterns & Conventions**: Code patterns that emerged or were established during this project.
+   - **Patterns & Conventions**: Code patterns that emerged or were established.
    - **Lessons Learned**: What was harder than expected, what went wrong, what was surprisingly easy.
-   - **Reusable Snippets**: Any code patterns, configurations, or test setups worth reusing in future projects.
-   - **Recommendations for CLAUDE.md**: Specific additions or updates to suggest for the repo's CLAUDE.md file.
+   - **Reusable Snippets**: Code patterns, configurations, or test setups worth reusing.
 
-6. **Present recommendations**: Show the CLAUDE.md recommendations and ask if the user wants to append them.
+6. **Interactive section review**: Present each section one at a time and ask the user where it should go. For each section, use AskUserQuestion with these options:
+   - **CLAUDE.md** — Append to the repo's CLAUDE.md (project conventions and instructions)
+   - **Memory** — Write to Claude's memory files at `~/.claude/projects/{encoded-path}/memory/` (auto-loaded knowledge in future sessions)
+   - **Both** — Write to both CLAUDE.md and memory
+   - **Skip** — Keep only in the takeaway file, don't write anywhere else
 
-7. **If approved**, append the recommendations to the repo's CLAUDE.md under a dated "## Learnings" section. If CLAUDE.md doesn't exist, create it with just the learnings section.
+   The user can also edit or correct the content before confirming. If they provide corrections, apply them before writing.
 
-8. **Confirm**: Tell the user the project is closed and the takeaway is saved at the file path.
+7. **Execute the user's choices**:
+   - **For CLAUDE.md destinations**: Append the selected sections to the repo's CLAUDE.md under a dated `## Learnings ({project title})` heading. If CLAUDE.md doesn't exist, create it with just the learnings section.
+   - **For Memory destinations**:
+     - Compute the encoded project path (e.g., `/home/user/code/my-app` → `-home-user-code-my-app`)
+     - Write a memory file to `~/.claude/projects/{encoded-path}/memory/project-{project-slug}-takeaway.md` with the selected sections
+     - Read the existing `MEMORY.md` in that directory (create if it doesn't exist)
+     - Add a link to the new memory file in `MEMORY.md`
+
+8. **Confirm**: Summarize what was written where. Tell the user the full takeaway is always available at `~/.claude/session-manager/repos/{slug}/projects/{project-slug}.takeaway.md`.
