@@ -12,9 +12,9 @@ You are setting up the claude-session-manager plugin for the user. This creates 
 
 2. **Scan for repositories**: List directories in the user's current parent directory (and common code directories like ~/code, ~/projects, ~/repos) that contain a `.git` directory.
 
-3. **Present repos to the user**: Use AskUserQuestion with multiSelect to let them choose which repos to track. Group repos that appear to be copies (e.g., `b4`, `b4-2`, `b4-3` — same base name with `-N` suffix).
+3. **Present repos to the user**: Use AskUserQuestion with multiSelect to let them choose which repos to track. Group repos that appear to be copies (e.g., `my-app`, `my-app-2`, `my-app-3` — same base name with `-N` suffix).
 
-4. **Auto-detect groups**: For repos with `-1`, `-2`, `-3` etc. suffixes, suggest grouping them together. Ask the user to confirm. The group name is the base name (e.g., "b4" for b4, b4-2, b4-3).
+4. **Auto-detect groups**: For repos with `-1`, `-2`, `-3` etc. suffixes, suggest grouping them together. Ask the user to confirm. The group name is the base name (e.g., "my-app" for my-app, my-app-2, my-app-3).
 
 5. **Ask about resume behavior**: Use AskUserQuestion to ask:
    "When you start a session on a branch where you've worked before, how should Claude handle it?"
