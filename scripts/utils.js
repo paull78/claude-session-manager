@@ -11,6 +11,19 @@ const { execSync } = require("child_process");
 const SESSION_MANAGER_DIR = path.join(os.homedir(), ".claude", "session-manager");
 const CONFIG_FILE = path.join(SESSION_MANAGER_DIR, "config.json");
 const CLAUDE_DIR = path.join(os.homedir(), ".claude");
+const SCHEMA_VERSION = 1;
+
+/**
+ * Check if a data object's schema version matches expected.
+ * Logs a warning if mismatched but never fails (forward compatibility).
+ */
+function checkSchemaVersion(data, label) {
+  if (data && data.schemaVersion && data.schemaVersion !== SCHEMA_VERSION) {
+    process.stderr.write(
+      `[claude-session-manager] Warning: ${label} has schemaVersion ${data.schemaVersion}, expected ${SCHEMA_VERSION}. Data may need migration.\n`
+    );
+  }
+}
 
 /**
  * Read and parse config.json. Returns parsed object or null.
@@ -505,6 +518,8 @@ function deleteCurrentSessionMarker(slug) {
 module.exports = {
   SESSION_MANAGER_DIR,
   CLAUDE_DIR,
+  SCHEMA_VERSION,
+  checkSchemaVersion,
   readConfig,
   resolveSlug,
   encodePath,

@@ -23,6 +23,7 @@ When you detect that the user is starting significant work (creating a plan, sta
 3. **Create project JSON** at `~/.claude/session-manager/repos/{slug}/projects/{project-slug}.json`:
    ```json
    {
+     "schemaVersion": 1,
      "slug": "project-slug",
      "title": "Human-readable title",
      "status": "active",

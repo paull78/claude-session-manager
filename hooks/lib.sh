@@ -143,10 +143,17 @@ resolve_slug() {
   auto_track_value=$(read_json_field "$CONFIG_FILE" "autoTrack")
   auto_track_value="${auto_track_value:-true}"
 
+  # Preserve existing resumeMode (defaults to "ask")
+  local resume_mode_value
+  resume_mode_value=$(read_json_field "$CONFIG_FILE" "resumeMode")
+  resume_mode_value="${resume_mode_value:-ask}"
+
   # Write new config with escaped path
   {
     printf '{\n'
+    printf '  "schemaVersion": 1,\n'
     printf '  "autoTrack": %s,\n' "$auto_track_value"
+    printf '  "resumeMode": "%s",\n' "$resume_mode_value"
     printf '  "repos": {\n'
     if [ -n "$existing_repos" ]; then
       # Trim trailing newline and add comma

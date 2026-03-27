@@ -20,7 +20,7 @@ Without (Claude infers from current context):
 
 ## Steps
 
-1. **Read the knowledge index** at `~/.claude/session-manager/knowledge-index.json`. If it doesn't exist or is empty, tell the user: "No past projects found in the knowledge base. Complete a project with `/claude-session-manager:close-project` to start building your knowledge base."
+1. **Read the knowledge index** at `~/.claude/session-manager/knowledge-index.json`. The file is a JSON object with `schemaVersion` and an `entries` array. If it doesn't exist, has no entries, or is empty, tell the user: "No past projects found in the knowledge base. Complete a project with `/claude-session-manager:close-project` to start building your knowledge base."
 
 2. **Determine search context**:
    - If the user provided search terms, use those

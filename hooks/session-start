@@ -65,6 +65,7 @@ fi
 SESSION_FILE="$REPOS_DIR/sessions/${SESSION_ID}.json"
 cat > "$SESSION_FILE" <<ENDJSON
 {
+  "schemaVersion": 1,
   "sessionId": "${SESSION_ID}",
   "repoSlug": "$(escape_for_json "$SLUG")",
   "repoPath": "$(escape_for_json "$CWD")",

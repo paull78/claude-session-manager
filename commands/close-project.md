@@ -51,6 +51,15 @@ Mark the current project as completed and generate a takeaway document. Nothing 
      - Add a link to the new memory file in `MEMORY.md`
 
 8. **Update the knowledge index**: Add an entry to `~/.claude/session-manager/knowledge-index.json` (create the file if it doesn't exist as an empty JSON array `[]`):
+   The knowledge index file wraps entries in an object with a schema version:
+   ```json
+   {
+     "schemaVersion": 1,
+     "entries": [...]
+   }
+   ```
+
+   Each entry:
    ```json
    {
      "project": "{project-slug}",

@@ -264,6 +264,7 @@ After running `/claude-session-manager:setup`, the config lives at `~/.claude/se
 
 ```json
 {
+  "schemaVersion": 1,
   "autoTrack": true,
   "resumeMode": "ask",
   "repos": {

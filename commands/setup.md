@@ -25,6 +25,7 @@ You are setting up the claude-session-manager plugin for the user. This creates 
 6. **Create the config**: Write `~/.claude/session-manager/config.json` with this structure:
    ```json
    {
+     "schemaVersion": 1,
      "autoTrack": true,
      "resumeMode": "ask",
      "repos": {
