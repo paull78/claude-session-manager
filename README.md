@@ -90,7 +90,7 @@ This walks you through:
 | Command | Description |
 |---------|-------------|
 | `/claude-session-manager:setup` | First-time configuration wizard |
-| `/claude-session-manager:dashboard` | Cross-repo status overview of all tracked repos |
+| `/claude-session-manager:dashboard` | Cross-repo status overview (add `--web` for graphical dashboard) |
 | `/claude-session-manager:resume` | Generate a full context briefing and resume work |
 | `/claude-session-manager:note "text"` | Add a note to the current session (for decisions, context) |
 | `/claude-session-manager:history` | View all past projects with filters (`--active`, `--completed`, `--all`) |
@@ -196,6 +196,38 @@ Load their takeaways? [Yes / Pick specific ones / No]
 ```
 
 The knowledge search also triggers automatically as a skill when you start significant new work — Claude asks if you want to check past projects before diving in.
+
+## Web Dashboard
+
+A local web app for visual session and project management. Dark theme, zero dependencies, runs on localhost.
+
+### Launch
+
+From Claude Code:
+```
+/claude-session-manager:dashboard --web
+```
+
+Or standalone:
+```bash
+node /path/to/claude-session-manager/scripts/open-dashboard.js
+```
+
+### Views
+
+| Tab | What it shows |
+|-----|--------------|
+| **Overview** | Stats cards (repos, projects, sessions) + recent activity timeline |
+| **Projects** | All projects with status, session count, dates. Filter by status/repo. |
+| **Sessions** | All sessions with smart classification (meaningful/noise/orphaned). Bulk select and delete. |
+| **Knowledge** | Searchable knowledge index with tag filtering |
+
+The Sessions tab classifies sessions automatically:
+- **Meaningful** — has commits, linked to a project, or > 2 min duration
+- **Noise** — short (< 2 min), no commits, no project (exploratory one-liners)
+- **Orphaned** — has commits but no linked project
+
+Select noise sessions and bulk-delete to keep your data clean.
 
 ## How It Works
 
