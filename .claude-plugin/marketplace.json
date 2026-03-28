@@ -1,0 +1,18 @@
+{
+  "name": "paull78-claude-session-manager",
+  "owner": {
+    "name": "paull78"
+  },
+  "metadata": {
+    "description": "Claude Code plugin to track and resume parallel development sessions across repo copies",
+    "homepage": "https://github.com/paull78/claude-session-manager"
+  },
+  "plugins": [
+    {
+      "name": "claude-session-manager",
+      "version": "1.0.0",
+      "source": "./plugin",
+      "description": "Track and resume parallel development sessions across repo copies. Auto-captures sessions, generates resume briefings, cross-repo dashboard, project takeaways with knowledge search, and a web-based management UI."
+    }
+  ]
+}
