@@ -35,9 +35,17 @@ Track work from start to finish. When a project is complete, generate a structur
 - Node.js (v18+) — required for the extraction hooks
 - Git
 
-### Step 1: Add the marketplace
+### Option A: Install via `/plugin` (recommended)
 
-Open your Claude Code settings file at `~/.claude/settings.json` and add the marketplace source under `extraKnownMarketplaces`:
+1. Run `/plugin` in any Claude Code session
+2. Select **"Add marketplace"**
+3. Enter the repo: `paull78/claude-session-manager`
+4. Once added, select the plugin to install and enable it
+5. Restart Claude Code (or run `/clear`)
+
+### Option B: Manual install via settings.json
+
+**Step 1: Add the marketplace** — open `~/.claude/settings.json` and add:
 
 ```json
 {
@@ -54,9 +62,7 @@ Open your Claude Code settings file at `~/.claude/settings.json` and add the mar
 
 > If you already have other entries under `extraKnownMarketplaces`, just add the `"claude-session-manager"` key alongside them.
 
-### Step 2: Enable the plugin
-
-In the same `~/.claude/settings.json`, add the plugin to `enabledPlugins`:
+**Step 2: Enable the plugin** — in the same file, add:
 
 ```json
 {
@@ -66,9 +72,7 @@ In the same `~/.claude/settings.json`, add the plugin to `enabledPlugins`:
 }
 ```
 
-### Step 3: Restart Claude Code
-
-Close and reopen Claude Code (or run `/clear`) so the plugin hooks are loaded.
+**Step 3: Restart Claude Code** — close and reopen (or run `/clear`) so the plugin hooks are loaded.
 
 ### Step 4: Run setup
 
