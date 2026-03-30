@@ -31,6 +31,24 @@ fi
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || BRANCH="unknown"
 COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null) || COMMIT_HASH=""
 
+# Close any orphaned previous session (from /clear, /compact, or crash)
+MARKER_FILE="$SESSION_MANAGER_DIR/.current-session-${SLUG}"
+if [ -f "$MARKER_FILE" ]; then
+  OLD_SESSION_ID=$(cat "$MARKER_FILE" 2>/dev/null)
+  if [ -n "$OLD_SESSION_ID" ]; then
+    OLD_SESSION_FILE="$REPOS_DIR/sessions/${OLD_SESSION_ID}.json"
+    if [ -f "$OLD_SESSION_FILE" ]; then
+      OLD_ENDED=$(read_json_field "$OLD_SESSION_FILE" "endedAt")
+      if [ -z "$OLD_ENDED" ]; then
+        ENDED_NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        sed "s/\"endedAt\": null/\"endedAt\": \"${ENDED_NOW}\", \"closedReason\": \"orphaned\"/" \
+          "$OLD_SESSION_FILE" > "${OLD_SESSION_FILE}.tmp" && \
+          mv "${OLD_SESSION_FILE}.tmp" "$OLD_SESSION_FILE"
+      fi
+    fi
+  fi
+fi
+
 # Generate session ID (16 hex chars, portable — no xxd dependency)
 SESSION_ID=$(od -An -tx1 -N8 /dev/urandom | tr -d ' \n' | head -c 16)
 

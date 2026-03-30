@@ -10,12 +10,17 @@
 const {
   resolveSlug,
   getCurrentSessionId,
+  readSessionJson,
   findJSONLForCwd,
   tailJSONL,
   findPlanReferences,
   extractSummary,
   hasTaskCreate,
   updateSessionJson,
+  getGitInfo,
+  getActiveProject,
+  closeSession,
+  createSession,
 } = require("./utils");
 
 function main() {
@@ -27,8 +32,23 @@ function main() {
   if (!slug) return;
 
   // 3. Get current session ID
-  const sessionId = getCurrentSessionId(slug);
+  let sessionId = getCurrentSessionId(slug);
   if (!sessionId) return;
+
+  // 3.5 Detect branch changes mid-session
+  const sessionData = readSessionJson(slug, sessionId);
+  if (sessionData) {
+    const currentBranch = getGitInfo(cwd).branch;
+    if (currentBranch && sessionData.branch && currentBranch !== sessionData.branch) {
+      // Branch changed — close old session, create new one
+      closeSession(slug, sessionId, {
+        cwd,
+        summary: sessionData.summary || null,
+        reason: "branch-switch",
+      });
+      sessionId = createSession(slug, cwd);
+    }
+  }
 
   // 4. Find the JSONL file for this session
   //    We need the Claude session ID, which might differ from ours.
@@ -62,6 +82,15 @@ function main() {
 
   if (taskCreated) {
     updates.taskSessionId = sessionId;
+  }
+
+  // 7.5 Retroactive projectSlug linking
+  const currentSession = readSessionJson(slug, sessionId);
+  if (currentSession && !currentSession.projectSlug) {
+    const projectSlug = getActiveProject(slug, currentSession.branch);
+    if (projectSlug) {
+      updates.projectSlug = projectSlug;
+    }
   }
 
   // Only write if we have something to update

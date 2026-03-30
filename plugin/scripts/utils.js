@@ -6,6 +6,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const crypto = require("crypto");
 const { execSync } = require("child_process");
 
 const SESSION_MANAGER_DIR = path.join(os.homedir(), ".claude", "session-manager");
@@ -504,6 +505,107 @@ function hasTaskCreate(messages) {
 }
 
 /**
+ * Find an active project for a given slug and branch.
+ * Port of the bash get_active_project from lib.sh.
+ * Returns the project slug or null.
+ */
+function getActiveProject(slug, branch) {
+  const projectsDir = path.join(SESSION_MANAGER_DIR, "repos", slug, "projects");
+  try {
+    const files = fs.readdirSync(projectsDir).filter((f) => f.endsWith(".json"));
+    for (const file of files) {
+      try {
+        const filePath = path.join(projectsDir, file);
+        const raw = fs.readFileSync(filePath, "utf8");
+        const project = JSON.parse(raw);
+        if (project.status !== "active") continue;
+        if (Array.isArray(project.branches) && project.branches.includes(branch)) {
+          return path.basename(file, ".json");
+        }
+      } catch { /* skip unreadable */ }
+    }
+  } catch { /* directory doesn't exist */ }
+  return null;
+}
+
+/**
+ * Close/finalize a session. Sets endedAt and optional git state.
+ * Skips if session is already closed (has endedAt).
+ * options: { cwd, summary, reason }
+ *   reason: "branch-switch", "orphaned", "stale"
+ */
+function closeSession(slug, sessionId, options = {}) {
+  const session = readSessionJson(slug, sessionId);
+  if (!session || session.endedAt) return;
+
+  const updates = {
+    endedAt: new Date().toISOString(),
+  };
+
+  if (options.cwd) {
+    const gitInfo = getGitInfo(options.cwd);
+    if (gitInfo.commitHash) updates.endCommit = gitInfo.commitHash;
+    if (session.startCommit && gitInfo.commitHash) {
+      updates.commitCount = getCommitCount(options.cwd, session.startCommit, "HEAD");
+    }
+  }
+
+  if (options.summary) {
+    updates.summary = options.summary;
+  }
+
+  if (options.reason) {
+    updates.closedReason = options.reason;
+  }
+
+  updateSessionJson(slug, sessionId, updates);
+}
+
+/**
+ * Create a new session JSON file and update the marker.
+ * Used when the stop hook detects a branch switch mid-session.
+ * Returns the new session ID.
+ */
+function createSession(slug, cwd) {
+  const sessionId = crypto.randomBytes(8).toString("hex");
+  const gitInfo = getGitInfo(cwd);
+  const branch = gitInfo.branch || "unknown";
+  const projectSlug = getActiveProject(slug, branch);
+
+  const session = {
+    schemaVersion: SCHEMA_VERSION,
+    sessionId,
+    repoSlug: slug,
+    repoPath: cwd,
+    branch,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    startCommit: gitInfo.commitHash || null,
+    endCommit: null,
+    commitCount: 0,
+    projectSlug,
+    notes: [],
+    tags: [],
+    summary: null,
+    planFile: null,
+    keyDecisions: [],
+  };
+
+  const sessionsDir = path.join(SESSION_MANAGER_DIR, "repos", slug, "sessions");
+  fs.mkdirSync(sessionsDir, { recursive: true });
+  const filePath = path.join(sessionsDir, `${sessionId}.json`);
+  const tmpPath = filePath + ".tmp";
+  fs.writeFileSync(tmpPath, JSON.stringify(session, null, 2) + "\n", "utf8");
+  fs.renameSync(tmpPath, filePath);
+
+  // Update marker
+  const markerPath = path.join(SESSION_MANAGER_DIR, `.current-session-${slug}`);
+  fs.writeFileSync(markerPath, sessionId, "utf8");
+
+  return sessionId;
+}
+
+/**
  * Delete the current-session marker file.
  */
 function deleteCurrentSessionMarker(slug) {
@@ -539,5 +641,8 @@ module.exports = {
   getLastCommitMessage,
   extractSummary,
   hasTaskCreate,
+  getActiveProject,
+  closeSession,
+  createSession,
   deleteCurrentSessionMarker,
 };

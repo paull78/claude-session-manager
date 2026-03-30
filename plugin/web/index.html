@@ -410,6 +410,23 @@ input[type="checkbox"] {
   max-width: 440px;
   width: 90%;
 }
+.modal.modal-wide {
+  max-width: 720px;
+}
+.modal pre.takeaway-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg);
+  margin-bottom: 16px;
+}
 .modal h3 {
   font-size: 15px;
   margin-bottom: 12px;
@@ -567,6 +584,17 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- Takeaway modal -->
+<div class="modal-overlay" id="takeaway-modal" aria-modal="true" role="dialog" aria-label="Project takeaway">
+  <div class="modal modal-wide">
+    <h3 id="takeaway-modal-title">Takeaway</h3>
+    <pre class="takeaway-content" id="takeaway-modal-content">Loading...</pre>
+    <div class="actions">
+      <button class="btn btn-default" id="takeaway-modal-close">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -716,7 +744,7 @@ input[type="checkbox"] {
       sessions.forEach(s => {
         html += `<li class="activity-item">
           <div class="activity-meta">
-            <span class="badge repo">${esc(s.repoSlug)}</span>
+            <span class="badge repo">${esc(s.repoDisplay || s.repoSlug)}</span>
             <span class="badge branch">${esc(s.branch || '')}</span>
           </div>
           <span class="activity-summary">${esc(truncate(s.summary, 80))}</span>
@@ -754,6 +782,8 @@ input[type="checkbox"] {
     // Collect repos/groups for filter
     const repos = [...new Set(data.map(p => p.repo).filter(Boolean))].sort();
     const groups = [...new Set(data.map(p => p.group).filter(Boolean))].sort();
+    const repoDisplayMap = {};
+    data.forEach(p => { if (p.repo) repoDisplayMap[p.repo] = p.repoDisplay || p.repo; });
 
     let html = '<div class="filter-bar">';
     html += `<select id="proj-status-filter" aria-label="Filter by status">
@@ -766,7 +796,7 @@ input[type="checkbox"] {
     html += `<select id="proj-repo-filter" aria-label="Filter by repo or group">
       <option value="all">All Repos</option>`;
     repos.forEach(r => {
-      html += `<option value="repo:${esc(r)}"${projectsFilterRepo==='repo:'+r?' selected':''}>${esc(r)}</option>`;
+      html += `<option value="repo:${esc(r)}"${projectsFilterRepo==='repo:'+r?' selected':''}>${esc(repoDisplayMap[r] || r)}</option>`;
     });
     groups.forEach(g => {
       html += `<option value="group:${esc(g)}"${projectsFilterRepo==='group:'+g?' selected':''}>[group] ${esc(g)}</option>`;
@@ -822,10 +852,12 @@ input[type="checkbox"] {
     filtered.forEach((p, i) => {
       const statusCls = (p.status || 'active').toLowerCase();
       const period = formatDate(p.createdAt) + ' \u2013 ' + (p.completedAt ? formatDate(p.completedAt) : '');
-      const takeaway = p.hasTakeaway ? '\u2713' : '\u2014';
+      const takeaway = p.hasTakeaway
+        ? `<a href="#" class="view-takeaway" data-repo="${esc(p.repo)}" data-project="${esc(p.slug)}" data-title="${esc(p.title || p.slug)}" style="color:var(--accent);text-decoration:none;cursor:pointer" title="View takeaway">\u2713</a>`
+        : '\u2014';
       html += `<tr class="expandable" data-proj-idx="${i}">
         <td>${esc(p.title || p.slug)}</td>
-        <td><span class="badge repo">${esc(p.repo || '')}</span></td>
+        <td><span class="badge repo">${esc(p.repoDisplay || p.repo || '')}</span></td>
         <td><span class="status-badge ${statusCls}">${esc(p.status || 'active')}</span></td>
         <td>${p.sessionCount || 0}</td>
         <td>${period}</td>
@@ -898,12 +930,14 @@ input[type="checkbox"] {
 
     // Collect repos
     const repos = [...new Set(data.map(s => s.repoSlug).filter(Boolean))].sort();
+    const sessRepoDisplayMap = {};
+    data.forEach(s => { if (s.repoSlug) sessRepoDisplayMap[s.repoSlug] = s.repoDisplay || s.repoSlug; });
 
     let html = '<div class="filter-bar">';
     html += `<select id="sess-repo-filter" aria-label="Filter by repo">
       <option value="all">All Repos</option>`;
     repos.forEach(r => {
-      html += `<option value="${esc(r)}"${sessionsFilterRepo===r?' selected':''}>${esc(r)}</option>`;
+      html += `<option value="${esc(r)}"${sessionsFilterRepo===r?' selected':''}>${esc(sessRepoDisplayMap[r] || r)}</option>`;
     });
     html += '</select>';
     html += `<input type="text" id="sess-branch-filter" placeholder="Branch filter..." value="${esc(sessionsFilterBranch)}" aria-label="Filter by branch">`;
@@ -944,7 +978,7 @@ input[type="checkbox"] {
       const rowCls = cls === 'noise' ? 'noise-row' : '';
       html += `<tr class="${rowCls}" data-session-key="${esc(key)}">
         <td><input type="checkbox" class="sess-check" data-key="${esc(key)}"${checked} aria-label="Select session ${esc(s.sessionId)}"></td>
-        <td><span class="badge repo">${esc(s.repoSlug)}</span></td>
+        <td><span class="badge repo">${esc(s.repoDisplay || s.repoSlug)}</span></td>
         <td><span class="badge branch">${esc(s.branch || '')}</span></td>
         <td>${timeAgo(s.startedAt)}</td>
         <td>${formatDurationFromSessions(s)}</td>
@@ -1093,7 +1127,48 @@ input[type="checkbox"] {
     if (e.target === this) hideDeleteModal();
   });
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') hideDeleteModal();
+    if (e.key === 'Escape') {
+      hideDeleteModal();
+      hideTakeawayModal();
+    }
+  });
+
+  // --- Takeaway modal ---
+  function showTakeawayModal(repo, project, title) {
+    const modal = document.getElementById('takeaway-modal');
+    document.getElementById('takeaway-modal-title').textContent = 'Takeaway: ' + title;
+    document.getElementById('takeaway-modal-content').textContent = 'Loading...';
+    modal.classList.add('visible');
+    fetch('/api/takeaway/' + encodeURIComponent(repo) + '/' + encodeURIComponent(project))
+      .then(function(r) {
+        if (!r.ok) throw new Error('Not found');
+        return r.text();
+      })
+      .then(function(text) {
+        document.getElementById('takeaway-modal-content').textContent = text;
+      })
+      .catch(function() {
+        document.getElementById('takeaway-modal-content').textContent = 'Failed to load takeaway.';
+      });
+  }
+
+  function hideTakeawayModal() {
+    document.getElementById('takeaway-modal').classList.remove('visible');
+  }
+
+  document.getElementById('takeaway-modal-close').addEventListener('click', hideTakeawayModal);
+  document.getElementById('takeaway-modal').addEventListener('click', function(e) {
+    if (e.target === this) hideTakeawayModal();
+  });
+
+  // Delegate click on .view-takeaway links
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('.view-takeaway');
+    if (link) {
+      e.preventDefault();
+      e.stopPropagation();
+      showTakeawayModal(link.dataset.repo, link.dataset.project, link.dataset.title);
+    }
   });
 
   // --- Knowledge ---
@@ -1111,7 +1186,7 @@ input[type="checkbox"] {
   }
 
   function renderKnowledge(el) {
-    const entries = (knowledgeData && knowledgeData.entries) || [];
+    const entries = Array.isArray(knowledgeData) ? knowledgeData : (knowledgeData && knowledgeData.entries) || [];
     let html = '<div class="search-bar"><input type="search" id="knowledge-search" placeholder="Search by tag or summary..." value="' + esc(knowledgeSearch) + '" aria-label="Search knowledge base"></div>';
 
     let filtered = entries;
@@ -1133,7 +1208,7 @@ input[type="checkbox"] {
             <span class="card-title">${esc(e.project)}</span>
             <span class="card-date">${formatDate(e.completedAt)}</span>
           </div>
-          <span class="badge repo">${esc(e.repo || '')}</span>
+          <span class="badge repo">${esc(e.repoDisplay || e.repo || '')}</span>
           <div class="card-summary">${esc(e.summary || '')}</div>
           <div class="card-tags">${(e.tags || []).map(t => '<span class="tag-pill">' + esc(t) + '</span>').join('')}</div>
         </div>`;

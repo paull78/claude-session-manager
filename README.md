@@ -1,15 +1,14 @@
 # claude-session-manager
 
-A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that tracks and resumes parallel development sessions across repo copies.
+A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that tracks parallel development work across repo copies, preserves project history, and builds a unified knowledge base from your sessions.
 
 ## The Problem
 
-If you work across multiple copies of a repository (e.g., `my-app`, `my-app-2`, `my-app-3`) — each on a different branch with its own Claude Code session — you know the pain:
+Claude Code can resume individual sessions, but if you work across multiple copies of a repository (e.g., `my-app`, `my-app-2`, `my-app-3`) — each on a different branch — the bigger challenges remain:
 
-- **Lost context**: You open a session in `my-app-2` and can't remember what you were working on, what decisions were made, or what's left to do.
-- **No continuity**: Each new Claude session starts from scratch. The previous session's reasoning, plan progress, and key decisions are gone.
-- **No big picture**: There's no way to see what's happening across all your repos and branches at a glance.
-- **Forgotten lessons**: When a project is done, the patterns you discovered and mistakes you made evaporate.
+- **No big picture**: There's no way to see what's happening across all your repos and branches at a glance. Which copy has what in-flight? What's blocked?
+- **Lost project history**: Once a feature is merged and the branch deleted, the reasoning, decisions, and false starts that shaped it are gone forever.
+- **Forgotten lessons**: Patterns you discovered and mistakes you made in one project never surface when you start the next one. Every project starts from zero institutional knowledge.
 
 **claude-session-manager** solves all of this.
 

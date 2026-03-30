@@ -69,6 +69,57 @@ function parseBody(req) {
 }
 
 // ---------------------------------------------------------------------------
+// Repo name resolution (git remote → repo name, cached per slug)
+// ---------------------------------------------------------------------------
+
+const repoNameCache = {};
+
+function resolveRepoName(slug) {
+  if (repoNameCache[slug] !== undefined) return repoNameCache[slug];
+
+  // Try to find repo path from config or from a session file
+  let repoPath = null;
+  const config = readJSON(path.join(DATA_DIR, 'config.json'));
+  if (config && config.repos && config.repos[slug] && config.repos[slug].path) {
+    repoPath = config.repos[slug].path;
+  }
+  if (!repoPath) {
+    // Fall back to reading the first session to get repoPath
+    const sessionsDir = path.join(DATA_DIR, 'repos', slug, 'sessions');
+    try {
+      const files = fs.readdirSync(sessionsDir).filter((f) => f.endsWith('.json'));
+      for (const f of files) {
+        const s = readJSON(path.join(sessionsDir, f));
+        if (s && s.repoPath) { repoPath = s.repoPath; break; }
+      }
+    } catch { /* ignore */ }
+  }
+
+  if (repoPath && safeStat(repoPath)) {
+    try {
+      const url = execSync('git -C ' + JSON.stringify(repoPath) + ' remote get-url origin 2>/dev/null', {
+        encoding: 'utf8', timeout: 3000,
+      }).trim();
+      // Extract repo name from URL: "...github.com/org/repo-name.git" → "repo-name"
+      const match = url.match(/\/([^/]+?)(?:\.git)?$/);
+      if (match) {
+        repoNameCache[slug] = match[1];
+        return repoNameCache[slug];
+      }
+    } catch { /* ignore */ }
+  }
+
+  repoNameCache[slug] = null;
+  return null;
+}
+
+function repoDisplayName(slug) {
+  const name = resolveRepoName(slug);
+  if (name && name !== slug) return name + ' (' + slug + ')';
+  return slug;
+}
+
+// ---------------------------------------------------------------------------
 // Data loaders
 // ---------------------------------------------------------------------------
 
@@ -201,6 +252,7 @@ function handleOverview(_req, res) {
     const recentSessions = sorted.map((s) => ({
       sessionId: s.sessionId,
       repoSlug: s._repoSlug,
+      repoDisplay: repoDisplayName(s._repoSlug),
       branch: s.branch,
       startedAt: s.startedAt,
       endedAt: s.endedAt,
@@ -238,12 +290,17 @@ function handleProjects(req, res) {
       const repoConfig = repos[slug] || {};
 
       for (const p of projects) {
-        const sessionCount = sessions.filter((s) => s.projectSlug === p.slug).length;
+        // Match sessions via projectSlug on session OR via sessions array on project
+        const projectSessionIds = new Set(p.sessions || []);
+        const sessionCount = sessions.filter(
+          (s) => s.projectSlug === p.slug || projectSessionIds.has(s.sessionId)
+        ).length;
         allProjects.push({
           slug: p.slug,
           title: p.title || p.slug,
           status: p.status || 'active',
           repo: slug,
+          repoDisplay: repoDisplayName(slug),
           group: repoConfig.group || null,
           sessionCount,
           createdAt: p.createdAt || null,
@@ -273,6 +330,7 @@ function handleSessions(req, res) {
         allSessions.push({
           sessionId: s.sessionId,
           repoSlug: s._repoSlug,
+          repoDisplay: repoDisplayName(s._repoSlug),
           branch: s.branch || null,
           startedAt: s.startedAt || null,
           endedAt: s.endedAt || null,
@@ -332,7 +390,11 @@ function handleKnowledge(req, res) {
   try {
     const indexPath = path.join(DATA_DIR, 'knowledge-index.json');
     const data = readJSON(indexPath);
-    sendJSON(res, 200, (data && data.entries) || []);
+    const entries = ((data && data.entries) || []).map((e) => ({
+      ...e,
+      repoDisplay: repoDisplayName(e.repo || ''),
+    }));
+    sendJSON(res, 200, entries);
   } catch (err) {
     sendJSON(res, 500, { error: err.message });
   }
@@ -372,6 +434,25 @@ function handleGitInfo(req, res, slug) {
     } catch { /* ignore */ }
 
     sendJSON(res, 200, { branch, lastCommit, uncommittedChanges });
+  } catch (err) {
+    sendJSON(res, 500, { error: err.message });
+  }
+}
+
+function handleTakeaway(req, res, repoSlug, projectSlug) {
+  try {
+    const takeawayPath = path.join(DATA_DIR, 'repos', repoSlug, 'projects', projectSlug + '.takeaway.md');
+    const stat = safeStat(takeawayPath);
+    if (!stat) {
+      sendJSON(res, 404, { error: 'Takeaway not found' });
+      return;
+    }
+    const content = fs.readFileSync(takeawayPath, 'utf8');
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.end(content);
   } catch (err) {
     sendJSON(res, 500, { error: err.message });
   }
@@ -429,6 +510,12 @@ async function handleRequest(req, res) {
     // POST /api/sessions/bulk-delete
     if (method === 'POST' && pathname === '/api/sessions/bulk-delete') {
       return await handleBulkDelete(req, res);
+    }
+
+    // GET /api/takeaway/:repoSlug/:projectSlug
+    const takeawayMatch = pathname.match(/^\/api\/takeaway\/([^/]+)\/([^/]+)$/);
+    if (method === 'GET' && takeawayMatch) {
+      return handleTakeaway(req, res, takeawayMatch[1], takeawayMatch[2]);
     }
 
     // GET /api/git-info/:slug

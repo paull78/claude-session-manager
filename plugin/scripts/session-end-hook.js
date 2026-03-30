@@ -27,6 +27,7 @@ const {
   getGitStatus,
   getLastCommitMessage,
   deleteCurrentSessionMarker,
+  closeSession,
 } = require("./utils");
 
 function main() {
@@ -194,6 +195,24 @@ ${finalSummary || "No summary available."}
 
   // 8. Clean up the .current-session marker
   deleteCurrentSessionMarker(slug);
+
+  // 9. Clean up stale sessions (no endedAt, not current)
+  try {
+    const sessionsDir = path.join(SESSION_MANAGER_DIR, "repos", slug, "sessions");
+    const sessionFiles = fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".json"));
+    for (const file of sessionFiles) {
+      if (file === `${sessionId}.json`) continue;
+      try {
+        const filePath = path.join(sessionsDir, file);
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw);
+        if (!data.endedAt) {
+          const staleId = path.basename(file, ".json");
+          closeSession(slug, staleId, { reason: "stale" });
+        }
+      } catch { /* skip unreadable */ }
+    }
+  } catch { /* non-critical */ }
 }
 
 // Run with full error protection
