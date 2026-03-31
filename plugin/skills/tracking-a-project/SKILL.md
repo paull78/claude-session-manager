@@ -1,18 +1,22 @@
 ---
 name: tracking-a-project
-description: Use when the user starts work that should be tracked as a project, creates a PRD, enters plan mode, or begins a multi-session feature
+description: Use when the user explicitly asks to track work as a project or runs /claude-session-manager:start-project
 ---
 
 # Tracking a Project
 
-When you detect that the user is starting significant work (creating a plan, starting a multi-step feature, writing a PRD), create or update a project tracking file.
+Only create or update project tracking when the user explicitly requests it — via `/claude-session-manager:start-project` or by directly asking to track work as a project. Never auto-create projects.
 
-## When to Create a Project
+## When to Activate
 
-- User enters plan mode or creates a plan file
-- User starts a multi-step feature that will span sessions
-- User explicitly asks to track work as a project
-- You detect this is the 2nd+ session on the same branch without an existing project
+- User runs `/claude-session-manager:start-project`
+- User explicitly says "track this as a project", "create a project for this", or similar
+
+## Do NOT activate when
+
+- User enters plan mode (plan ≠ project)
+- User starts multi-step work (let them decide if it's worth tracking)
+- You detect this is the 2nd+ session on the same branch
 
 ## How to Create/Update
 

@@ -61,7 +61,7 @@ ensure_dir "$REPOS_DIR/sessions"
 ensure_dir "$REPOS_DIR/briefings"
 ensure_dir "$REPOS_DIR/projects"
 
-# Look for active project BEFORE writing session file (so we can include projectSlug)
+# Look for active project (for context message only — never auto-link)
 PROJECT_SLUG=$(get_active_project "$SLUG" "$BRANCH")
 PROJECT_TITLE=""
 
@@ -73,11 +73,8 @@ if [ -n "$PROJECT_SLUG" ]; then
   fi
 fi
 
-# Write projectSlug as either "slug" or null
+# Always write projectSlug as null — project linking is manual only
 PROJECT_SLUG_JSON="null"
-if [ -n "$PROJECT_SLUG" ]; then
-  PROJECT_SLUG_JSON="\"$(escape_for_json "$PROJECT_SLUG")\""
-fi
 
 # Create session JSON (single write, no sed patching)
 SESSION_FILE="$REPOS_DIR/sessions/${SESSION_ID}.json"
@@ -138,8 +135,12 @@ if [ "$RESUME_MODE" = "manual" ]; then
 
 elif [ "$RESUME_MODE" = "auto" ]; then
   # Auto mode: tell Claude to read the full briefing immediately
-  if [ "$HAS_BRIEFING" -eq 1 ] && [ -n "$PROJECT_SLUG" ]; then
-    CONTEXT="You are resuming work on project '${PROJECT_TITLE}' in ${SLUG} on branch \`${BRANCH}\`. A resume briefing is available -- read it at \`${BRIEFING_PATH}\` for full context including progress, decisions, and next steps."
+  if [ "$HAS_BRIEFING" -eq 1 ] && [ "$HAS_PRIOR_SESSIONS" -eq 1 ]; then
+    CONTEXT="Prior sessions found for branch \`${BRANCH}\` in ${SLUG}. A resume briefing is available -- read it at \`${BRIEFING_PATH}\` for full context including progress, decisions, and next steps."
+    if [ -n "$PROJECT_SLUG" ]; then
+      CONTEXT="${CONTEXT}
+Active project: '${PROJECT_TITLE}'. To attach this session, run \`/claude-session-manager:start-project\`."
+    fi
   elif [ "$HAS_PRIOR_SESSIONS" -eq 1 ]; then
     CONTEXT="Prior sessions found for branch \`${BRANCH}\` in ${SLUG}. Run \`/claude-session-manager:resume\` for full context."
   else
@@ -166,7 +167,7 @@ else
     # Build the project line
     PROJECT_LINE=""
     if [ -n "$PROJECT_SLUG" ]; then
-      PROJECT_LINE="- Project: \"${PROJECT_TITLE}\" (active)"
+      PROJECT_LINE="- Project: \"${PROJECT_TITLE}\" (active, not yet linked — run \`/claude-session-manager:start-project\` to attach)"
     fi
 
     # Build activity line

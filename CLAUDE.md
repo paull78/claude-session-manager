@@ -21,7 +21,7 @@ Claude Code plugin that tracks and resumes parallel development sessions across 
 Three hooks registered in `plugin/.claude-plugin/hooks.json`:
 
 1. **SessionStart** (`plugin/hooks/session-start`) — Sync bash hook (~50ms budget). Generates session ID, records repo/branch, detects prior work, injects resume context. Uses shared utilities from `plugin/hooks/lib.sh`.
-2. **Stop** (`plugin/scripts/stop-hook.js`) — Async Node.js hook after each Claude response. Extracts summary, plan refs, and task creation from JSONL transcript.
+2. **Stop** (`plugin/scripts/stop-hook.js`) — Async Node.js hook after each Claude response. Extracts summary, plan refs, and task creation from JSONL transcript. Detects mid-session branch switches (closes old session, creates new one).
 3. **SessionEnd** (`plugin/scripts/session-end-hook.js`) — Async Node.js hook on session close. Full transcript extraction, briefing generation, project tracking update.
 
 ### Plugin Structure
@@ -31,7 +31,7 @@ plugin/
 ├── .claude-plugin/     # Plugin metadata (plugin.json, hooks.json)
 ├── hooks/              # Bash hooks + shared lib.sh
 ├── scripts/            # Node.js extraction logic + shared utils.js
-├── commands/           # User-facing slash commands (7 .md files)
+├── commands/           # User-facing slash commands (8 .md files)
 ├── agents/             # Remote agents: briefing-writer, takeaway-writer
 ├── skills/             # Auto-triggered skills (4 directories)
 └── web/                # Dashboard: server.js + index.html (zero-dep)
@@ -60,4 +60,8 @@ repos/{slug}/
 
 ### Web Dashboard
 
-`plugin/web/server.js` serves a REST API + `plugin/web/index.html` (vanilla HTML/CSS/JS, no framework). Four views: Overview, Projects, Sessions, Knowledge. Auto-classifies sessions as meaningful/noise/orphaned.
+`plugin/web/server.js` serves a REST API + `plugin/web/index.html` (vanilla HTML/CSS/JS, no framework). Four views: Overview, Projects, Sessions, Knowledge. Classifies sessions as meaningful or noise.
+
+### Project Lifecycle
+
+Projects are **manual only** — never auto-created or auto-linked. Users explicitly create projects via `/claude-session-manager:start-project` and close them via `/claude-session-manager:close-project`. Session-start detects active projects for context messages but never auto-attaches sessions.

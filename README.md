@@ -96,8 +96,9 @@ This walks you through:
 | `/claude-session-manager:dashboard` | Cross-repo status overview (add `--web` for graphical dashboard) |
 | `/claude-session-manager:resume` | Generate a full context briefing and resume work |
 | `/claude-session-manager:note "text"` | Add a note to the current session (for decisions, context) |
-| `/claude-session-manager:history` | View all past projects with filters (`--active`, `--completed`, `--all`) |
+| `/claude-session-manager:start-project` | Create a project to track multi-session work on the current branch |
 | `/claude-session-manager:close-project` | Mark project complete, generate takeaway, interactively distribute learnings |
+| `/claude-session-manager:history` | View all past projects with filters (`--active`, `--completed`, `--all`) |
 | `/claude-session-manager:search-knowledge` | Search past project takeaways for relevant patterns and lessons |
 
 ### Example: Dashboard
@@ -222,13 +223,12 @@ node /path/to/claude-session-manager/scripts/open-dashboard.js
 |-----|--------------|
 | **Overview** | Stats cards (repos, projects, sessions) + recent activity timeline |
 | **Projects** | All projects with status, session count, dates. Filter by status/repo. |
-| **Sessions** | All sessions with smart classification (meaningful/noise/orphaned). Bulk select and delete. |
+| **Sessions** | All sessions with smart classification (meaningful/noise). Bulk select and delete. |
 | **Knowledge** | Searchable knowledge index with tag filtering |
 
 The Sessions tab classifies sessions automatically:
-- **Meaningful** — has commits, linked to a project, or > 2 min duration
-- **Noise** — short (< 2 min), no commits, no project (exploratory one-liners)
-- **Orphaned** — has commits but no linked project
+- **Meaningful** — has commits or > 2 min duration
+- **Noise** — short (< 2 min) with no commits (exploratory one-liners)
 
 Select noise sessions and bulk-delete to keep your data clean.
 
@@ -254,7 +254,7 @@ Four skills trigger automatically based on context:
 | Skill | Triggers when |
 |-------|--------------|
 | `resuming-a-session` | Prior sessions detected on current branch |
-| `tracking-a-project` | User starts significant work, enters plan mode, or creates a PRD |
+| `tracking-a-project` | User explicitly asks to track work as a project or runs `start-project` |
 | `generating-takeaways` | Project is marked complete |
 | `searching-past-knowledge` | Starting significant new work where past projects might be relevant |
 

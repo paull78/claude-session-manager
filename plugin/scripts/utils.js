@@ -570,7 +570,6 @@ function createSession(slug, cwd) {
   const sessionId = crypto.randomBytes(8).toString("hex");
   const gitInfo = getGitInfo(cwd);
   const branch = gitInfo.branch || "unknown";
-  const projectSlug = getActiveProject(slug, branch);
 
   const session = {
     schemaVersion: SCHEMA_VERSION,
@@ -583,7 +582,7 @@ function createSession(slug, cwd) {
     startCommit: gitInfo.commitHash || null,
     endCommit: null,
     commitCount: 0,
-    projectSlug,
+    projectSlug: null,
     notes: [],
     tags: [],
     summary: null,

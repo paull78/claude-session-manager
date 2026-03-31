@@ -12,7 +12,7 @@ Mark the current project as completed and generate a takeaway document. Nothing 
    - Get the repo slug from `~/.claude/session-manager/config.json` for the current directory.
    - Get the current branch with `git rev-parse --abbrev-ref HEAD`.
    - Find the active project matching this branch in `~/.claude/session-manager/repos/{slug}/projects/*.json`.
-   - If no project found, tell the user and ask if they want to create one first.
+   - If no project found, tell the user: "No active project found on this branch. Run `/claude-session-manager:start-project` first to create one."
 
 2. **Confirm with the user**: Show the project title and ask them to confirm they want to close it.
 

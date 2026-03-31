@@ -18,7 +18,6 @@ const {
   hasTaskCreate,
   updateSessionJson,
   getGitInfo,
-  getActiveProject,
   closeSession,
   createSession,
 } = require("./utils");
@@ -82,15 +81,6 @@ function main() {
 
   if (taskCreated) {
     updates.taskSessionId = sessionId;
-  }
-
-  // 7.5 Retroactive projectSlug linking
-  const currentSession = readSessionJson(slug, sessionId);
-  if (currentSession && !currentSession.projectSlug) {
-    const projectSlug = getActiveProject(slug, currentSession.branch);
-    if (projectSlug) {
-      updates.projectSlug = projectSlug;
-    }
   }
 
   // Only write if we have something to update

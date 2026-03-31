@@ -180,13 +180,9 @@ function classifySession(s) {
 
   const durationMin = (startedAt && endedAt) ? (endedAt - startedAt) / 60000 : 0;
   const commitCount = s.commitCount || 0;
-  const projectSlug = s.projectSlug || null;
 
-  if (endedAt && durationMin < 2 && commitCount === 0 && projectSlug === null) {
+  if (endedAt && durationMin < 2 && commitCount === 0) {
     return 'noise';
-  }
-  if (commitCount > 0 && projectSlug === null) {
-    return 'orphaned';
   }
   return 'meaningful';
 }
