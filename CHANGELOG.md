@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1] — 2026-03-31
+
+### Changed
+- Takeaway sections destined for CLAUDE.md or memory are now generalized: specific class names, file paths, and code are stripped in favor of transferable principles
+- Takeaway file itself remains project-specific as a historical record
+- Sections that are too specific to generalize are recommended as Skip
+- Existing CLAUDE.md content is checked to avoid duplication
+
 ## [1.2.0] — 2026-03-31
 
 ### Added

@@ -20,7 +20,12 @@ When a project is being closed or the user wants to capture learnings from compl
 
 3. **Save the takeaway** to `~/.claude/session-manager/repos/{slug}/projects/{project-slug}.takeaway.md`. This file always contains the complete takeaway regardless of what the user does next.
 
-4. **Interactive section review**: Present each section to the user one at a time. For each section, ask where it should go:
+4. **Interactive section review**: Present each section to the user one at a time. Before asking, **generalize** the content for CLAUDE.md/memory:
+   - Strip specific class names, function names, file paths — extract the underlying principle
+   - If a lesson is too project-specific to generalize, recommend Skip
+   - Compare against existing CLAUDE.md — don't duplicate what's already there
+
+   Present the generalized version and ask where it should go:
    - **CLAUDE.md** — project conventions/instructions (appended under a dated heading)
    - **Memory** — Claude's auto-loaded memory files at `~/.claude/projects/{encoded-path}/memory/`
    - **Both**
@@ -32,7 +37,8 @@ When a project is being closed or the user wants to capture learnings from compl
 
 ## Key Principles
 - **Never auto-write** to CLAUDE.md or memory — always ask per section
-- Be specific, not generic — reference actual files, functions, and patterns
+- The takeaway file itself can be project-specific (names, paths, code) — it's a record
+- What goes to CLAUDE.md or memory must be **generic and transferable**
 - Focus on knowledge that helps FUTURE work, not just documenting what happened
 - Keep it concise — under 500 words total
 - The takeaway should be useful months from now when the details have been forgotten

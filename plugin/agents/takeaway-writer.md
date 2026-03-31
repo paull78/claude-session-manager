@@ -57,8 +57,7 @@ Specific code patterns, configurations, or setups worth templating:
 - The interactive distribution step happens AFTER you generate the takeaway — that's handled by the close-project command, not by you
 
 ## Guidelines
-- Be specific, not generic. "Test database queries with real connections" is good. "Write good tests" is worthless.
-- Focus on what's unique to THIS project and codebase
+- The takeaway file is a **project record** — it can reference specific files, classes, and commits
 - Keep it under 500 words total — this is a reference doc, not a novel
-- Reference specific files, functions, and patterns by name
-- Format each section so it reads well standalone (someone might only see one section in CLAUDE.md or memory)
+- Focus on what's unique to THIS project and codebase
+- Format each section so it reads well standalone

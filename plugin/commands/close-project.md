@@ -34,7 +34,15 @@ Mark the current project as completed and generate a takeaway document. Nothing 
    - **Lessons Learned**: What was harder than expected, what went wrong, what was surprisingly easy.
    - **Reusable Snippets**: Code patterns, configurations, or test setups worth reusing.
 
-6. **Interactive section review**: Present each section one at a time and ask the user where it should go. For each section, use AskUserQuestion with these options:
+6. **Interactive section review**: Present each section one at a time. For each section:
+
+   First, **generalize the content** for CLAUDE.md/memory destinations. The takeaway file keeps project-specific details (class names, file paths, specific code), but what goes into CLAUDE.md or memory must be **generic and transferable**:
+   - Strip specific class names, function names, file paths, and variable names
+   - Extract the underlying principle or pattern (e.g., "ViewControllerBase.initialize() needs explicit null checks" → "Base class lifecycle methods may receive null arguments — always guard")
+   - If a lesson is too project-specific to generalize meaningfully, recommend **Skip**
+   - Compare against the existing CLAUDE.md — don't add what's already documented
+
+   Then present the **generalized version** and ask where it should go, using AskUserQuestion with these options:
    - **CLAUDE.md** — Append to the repo's CLAUDE.md (project conventions and instructions)
    - **Memory** — Write to Claude's memory files at `~/.claude/projects/{encoded-path}/memory/` (auto-loaded knowledge in future sessions)
    - **Both** — Write to both CLAUDE.md and memory
