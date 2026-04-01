@@ -12,20 +12,6 @@ Claude Code can resume individual sessions, but if you work across multiple copi
 
 **claude-session-manager** solves all of this.
 
-## What It Does
-
-### Automatic Session Tracking
-Every time you open Claude Code in a tracked repo, the plugin silently records the session — which branch, which commits, what time. When the session ends, it extracts a summary, key decisions, and plan references from Claude's conversation transcript.
-
-### Smart Resume
-When you start a new session on a branch where you've worked before, Claude shows you a quick summary of what was happening and asks if you want to resume. If yes, it loads the full context — plan progress, decisions, next steps. If not, it stays out of the way. You control the behavior: `"ask"` (default), `"auto"`, or `"manual"`.
-
-### Cross-Repo Dashboard
-One command shows the status of all your repos, branches, and active projects in a single table — grouped by repo copies.
-
-### Project Lifecycle
-Track work from start to finish. When a project is complete, generate a structured takeaway capturing patterns, lessons learned, and reusable snippets. You decide per-section what goes to CLAUDE.md, Claude's memory files, both, or stays in the takeaway only.
-
 ## Installation
 
 ### Prerequisites
@@ -73,9 +59,9 @@ Track work from start to finish. When a project is complete, generate a structur
 
 **Step 3: Restart Claude Code** — close and reopen (or run `/clear`) so the plugin hooks are loaded.
 
-### Step 4: Run setup
+## Getting Started
 
-In any Claude Code session, run:
+Run the setup wizard in any Claude Code session:
 
 ```
 /claude-session-manager:setup
@@ -88,102 +74,116 @@ This walks you through:
 4. Choosing your resume mode (`ask`, `auto`, or `manual`)
 5. Creating the configuration at `~/.claude/session-manager/config.json`
 
-## Commands
+Once setup is complete, the plugin works silently in the background. Every Claude Code session in a tracked repo is automatically recorded.
 
-| Command | Description |
-|---------|-------------|
-| `/claude-session-manager:setup` | First-time configuration wizard |
-| `/claude-session-manager:dashboard` | Cross-repo status overview (add `--web` for graphical dashboard) |
-| `/claude-session-manager:resume` | Generate a full context briefing and resume work |
-| `/claude-session-manager:note "text"` | Add a note to the current session (for decisions, context) |
-| `/claude-session-manager:start-project` | Create a project to track multi-session work on the current branch |
-| `/claude-session-manager:close-project` | Mark project complete, generate takeaway, interactively distribute learnings |
-| `/claude-session-manager:history` | View all past projects with filters (`--active`, `--completed`, `--all`) |
-| `/claude-session-manager:search-knowledge` | Search past project takeaways for relevant patterns and lessons |
+## Core Concepts
 
-### Example: Dashboard
+### Sessions
+
+A **session** is a single Claude Code conversation in a tracked repo. The plugin records sessions automatically — you don't need to do anything.
+
+Each session captures:
+- Which repo and branch you're on
+- Start and end timestamps
+- Commits made during the session
+- A summary extracted from Claude's conversation
+- Key decisions and plan file references
+
+When you open Claude Code on a branch where you've worked before, the plugin shows a summary of prior work and asks if you want to resume. You control this behavior with the `resumeMode` setting:
+- `"ask"` (default) — shows a summary, asks before loading full context
+- `"auto"` — loads the full resume briefing immediately
+- `"manual"` — no auto-resume; run `/claude-session-manager:resume` when you want it
+
+The plugin also detects mid-session branch switches — if you `git checkout` to a different branch, the current session is closed and a new one starts automatically.
+
+### Projects
+
+A **project** groups related sessions into a tracked unit of work — like a feature, a refactor, or a migration that spans multiple sessions. Projects are **fully manual**: you decide when to create one and when to close it.
+
+Not every session needs a project. Quick fixes, one-off tasks, and exploratory work are perfectly fine as standalone sessions. Projects are for work you want to preserve the history and extract learnings from.
+
+A project tracks:
+- Title and description
+- Which branches and repos it spans
+- All linked sessions
+- Plan files
+- Status (active, paused, completed)
+
+### Knowledge
+
+When you close a project, the plugin generates a **takeaway** — a structured post-mortem with:
+- **Summary** — what was built, scope, timespan
+- **Patterns & Conventions** — architecture and code patterns that emerged
+- **Lessons Learned** — what was harder than expected, what went wrong
+- **Reusable Snippets** — code patterns worth templating
+
+The takeaway is saved as a permanent record. You then choose, section by section, what goes into CLAUDE.md (project instructions), Claude's memory files, or stays in the takeaway only. Sections destined for CLAUDE.md or memory are **generalized** — specific names and paths are stripped in favor of transferable principles.
+
+All takeaways are indexed in a **knowledge base** that's searchable across repos. When you start new work, you can search for relevant lessons from past projects.
+
+## Workflow
+
+### 1. Start a Project
+
+When you begin work that will span multiple sessions:
 
 ```
-/claude-session-manager:dashboard
+/claude-session-manager:start-project
 ```
 
-```
-## Development Dashboard
-Updated: 2026-03-24 14:45
+Claude asks for a title (suggests one from the branch name), creates the project, and links the current session. If an active project already exists on the branch, it offers to attach instead.
 
-### my-app group (wireframe editor)
-| Copy      | Branch                    | Project        | Last Session | Status |
-|-----------|---------------------------|----------------|-------------|--------|
-| my-app    | main                      | —              | 2 days ago  | —      |
-| my-app-2  | feature/icon-resize       | Icon Resize    | 3h ago      | active |
-| my-app-3  | feature/comments-panel    | Comments Panel | yesterday   | paused |
+### 2. Work Across Sessions
 
-Active projects: 2 | Paused: 1 | Completed this week: 0
-```
+While you work, the plugin runs silently:
+- **Every response**: extracts the latest summary and plan references
+- **Branch switches**: detects `git checkout` and creates a new session automatically
+- **Session end**: generates a resume briefing with progress, decisions, and next steps
 
-### Example: Session Start (ask mode)
-
-When you open Claude Code on a branch with prior work, you'll see:
+When you return to the branch later, Claude shows what was happening and asks if you want to resume:
 
 ```
-I see you have prior work on this branch:
+Prior work detected on this branch:
 - Project: "Icon Resize" (active)
-- Branch: feature/icon-resize
 - Last session: 3h ago (4 total sessions)
 - Last activity: "Implemented resize handle rendering"
 
 Want me to load the full context, or are you starting something new?
 ```
 
-If you say yes, Claude reads the full briefing with plan progress, key decisions, and next steps. If no, it proceeds normally.
+You can also add notes to the current session at any time:
 
-### Example: Resume
+```
+/claude-session-manager:note "decided to use SVG transforms instead of CSS"
+```
+
+Or generate a fresh resume briefing on demand:
 
 ```
 /claude-session-manager:resume
 ```
 
-Generates a fresh briefing with:
-- **Current State** — branch, last commit, uncommitted changes
-- **Project Context** — what's being built and why
-- **Progress** — tasks done vs pending, plan status
-- **Key Decisions** — choices made in prior sessions
-- **Next Steps** — what to work on next
+### 3. Close a Project
 
-The briefing is saved for future session starts.
-
-### Example: Close Project
+When the work is done:
 
 ```
 /claude-session-manager:close-project
 ```
 
-Generates a structured takeaway with:
-- **Summary** — what was built, session count, timespan
-- **Patterns & Conventions** — code patterns that emerged
-- **Lessons Learned** — what was harder than expected, mistakes to avoid
-- **Reusable Snippets** — code worth templating for future use
+This:
+1. Marks the project as completed
+2. Generates a takeaway from all linked sessions, git history, and plans
+3. Presents each section for review — you choose where it goes (CLAUDE.md, memory, both, or skip)
+4. Indexes the takeaway in the knowledge base for future search
 
-The takeaway is saved to the plugin folder. Then each section is presented one at a time — you choose where it goes:
+### 4. Search Past Knowledge
 
-| Destination | What it means |
-|-------------|--------------|
-| **CLAUDE.md** | Appended to your repo's project instructions |
-| **Memory** | Written to Claude's auto-loaded memory files |
-| **Both** | Written to both |
-| **Skip** | Kept only in the takeaway file |
-
-You can also edit the content before confirming each section. Nothing is written to CLAUDE.md or memory without your explicit approval.
-
-The takeaway is also indexed in the knowledge base — searchable by future projects.
-
-### Example: Search Knowledge
+When starting new work, search across all completed project takeaways:
 
 ```
 /claude-session-manager:search-knowledge "pointer events drag"
 ```
-
-Searches across all completed project takeaways for relevant patterns and lessons:
 
 ```
 Found 2 past projects that might be relevant:
@@ -199,103 +199,58 @@ Found 2 past projects that might be relevant:
 Load their takeaways? [Yes / Pick specific ones / No]
 ```
 
-The knowledge search also triggers automatically as a skill when you start significant new work — Claude asks if you want to check past projects before diving in.
+## Dashboard
 
-## Web Dashboard
+### CLI
 
-A local web app for visual session and project management. Dark theme, zero dependencies, runs on localhost.
+```
+/claude-session-manager:dashboard
+```
 
-### Launch
+Shows a text table with all repos, branches, active projects, and recent sessions — grouped by repo copies.
 
-From Claude Code:
+### Web
+
 ```
 /claude-session-manager:dashboard --web
 ```
 
 Or standalone:
 ```bash
-node /path/to/claude-session-manager/scripts/open-dashboard.js
+npx claude-session-dashboard
 ```
 
-### Views
+A local web app (dark theme, zero dependencies, localhost only) with four tabs:
 
 | Tab | What it shows |
 |-----|--------------|
-| **Overview** | Stats cards (repos, projects, sessions) + recent activity timeline |
-| **Projects** | All projects with status, session count, dates. Filter by status/repo. |
-| **Sessions** | All sessions with smart classification (meaningful/noise). Bulk select and delete. |
-| **Knowledge** | Searchable knowledge index with tag filtering |
+| **Overview** | Stats cards (repos, projects, sessions) + recent activity |
+| **Projects** | All projects with status, session count, dates. Filter by status/repo. Click ✓ to view takeaways. |
+| **Sessions** | All sessions, classified as meaningful or noise. Bulk select and delete. |
+| **Knowledge** | Searchable index of all takeaways with tag filtering |
 
-The Sessions tab classifies sessions automatically:
-- **Meaningful** — has commits or > 2 min duration
-- **Noise** — short (< 2 min) with no commits (exploratory one-liners)
+Sessions are classified automatically:
+- **Meaningful** — has commits or lasted more than 2 minutes
+- **Noise** — short (< 2 min) with no commits
 
-Select noise sessions and bulk-delete to keep your data clean.
+## Commands Reference
 
-## How It Works
+| Command | Description |
+|---------|-------------|
+| `setup` | First-time configuration wizard |
+| `start-project` | Create a project to track multi-session work |
+| `close-project` | Mark project complete, generate takeaway |
+| `resume` | Generate a full context briefing |
+| `note "text"` | Add a note to the current session |
+| `dashboard` | Cross-repo status overview (`--web` for graphical) |
+| `history` | View all past projects (`--active`, `--completed`, `--all`) |
+| `search-knowledge` | Search past takeaways for patterns and lessons |
 
-### Hooks (Automatic)
-
-The plugin registers three Claude Code hooks:
-
-| Hook | When | What it does |
-|------|------|-------------|
-| **SessionStart** | Session opens (sync) | Records session, detects branch/repo, injects resume context based on `resumeMode` |
-| **Stop** | Claude finishes responding (async) | Extracts latest summary, plan references, task creation |
-| **SessionEnd** | Session closes (async) | Full extraction: decisions, commits, tasks. Generates briefing. |
-
-- **SessionStart** is a fast bash script (~50ms) that runs synchronously — it must not slow down session startup.
-- **Stop** and **SessionEnd** are Node.js scripts that run asynchronously — they parse Claude's JSONL transcript to extract structured data.
-
-### Skills (Automatic)
-
-Four skills trigger automatically based on context:
-
-| Skill | Triggers when |
-|-------|--------------|
-| `resuming-a-session` | Prior sessions detected on current branch |
-| `tracking-a-project` | User explicitly asks to track work as a project or runs `start-project` |
-| `generating-takeaways` | Project is marked complete |
-| `searching-past-knowledge` | Starting significant new work where past projects might be relevant |
-
-### Agents
-
-Two specialized agents handle complex synthesis tasks:
-
-- **briefing-writer** — Reads session metadata, git state, plan files, and task files to produce structured resume briefings.
-- **takeaway-writer** — Reads full project history to produce structured post-mortems with patterns, lessons, and reusable snippets.
-
-### Data Storage
-
-All data lives centrally at `~/.claude/session-manager/`:
-
-```
-~/.claude/session-manager/
-  config.json                       # Tracked repos, groups, preferences
-  knowledge-index.json              # Cross-repo index of all takeaways (for knowledge search)
-  repos/
-    {repo-slug}/
-      repo.json                     # Repo metadata
-      sessions/
-        {session-id}.json           # Per-session snapshot (branch, commits, summary, decisions)
-      projects/
-        {project-slug}.json         # Project tracking (status, sessions, plan files)
-        {project-slug}.takeaway.md  # Post-mortem when completed
-      briefings/
-        latest.md                   # Most recent resume briefing
-```
-
-The plugin **reads** Claude Code's existing data (session transcripts at `~/.claude/projects/`, plans at `~/.claude/plans/`, tasks at `~/.claude/tasks/`) but **never modifies** it. All plugin data is stored separately.
-
-## Compatibility
-
-- Works alongside other Claude Code plugins (superpowers, claude-mem, commit-commands, etc.)
-- No hook conflicts — uses SessionStart/Stop/SessionEnd only, avoids PostToolUse/UserPromptSubmit
-- No external dependencies beyond Node.js built-ins
+All commands are prefixed with `/claude-session-manager:`.
 
 ## Configuration
 
-After running `/claude-session-manager:setup`, the config lives at `~/.claude/session-manager/config.json`:
+After running setup, the config lives at `~/.claude/session-manager/config.json`:
 
 ```json
 {
@@ -310,12 +265,62 @@ After running `/claude-session-manager:setup`, the config lives at `~/.claude/se
 }
 ```
 
-- **autoTrack** (`true`/`false`) — When `true`, any git repo you open Claude Code in gets automatically tracked.
-- **resumeMode** (`"ask"` / `"auto"` / `"manual"`) — Controls how prior session context is presented:
-  - `"ask"` (default) — Shows a summary and asks before loading full context
-  - `"auto"` — Automatically loads the full resume briefing
-  - `"manual"` — No auto-resume; run `/claude-session-manager:resume` explicitly
-- **repos** — Manually configured repos. The `group` field links repo copies so the dashboard shows them together.
+- **autoTrack** — When `true`, any git repo you open Claude Code in gets automatically tracked for sessions.
+- **resumeMode** — Controls how prior session context is presented on startup (`ask`, `auto`, `manual`).
+- **repos** — Tracked repos. The `group` field links repo copies so the dashboard shows them together.
+
+## How It Works
+
+### Hooks
+
+Three Claude Code hooks run automatically:
+
+| Hook | When | What |
+|------|------|------|
+| **SessionStart** | Session opens (sync, ~50ms) | Records session, detects branch, injects resume context |
+| **Stop** | After each response (async) | Extracts summary, plan refs. Detects branch switches. |
+| **SessionEnd** | Session closes (async) | Full extraction, briefing generation, stale session cleanup |
+
+SessionStart is a bash script for speed. Stop and SessionEnd are Node.js scripts that parse Claude's JSONL transcript.
+
+### Skills
+
+Four skills activate based on context:
+
+| Skill | When |
+|-------|------|
+| `resuming-a-session` | Prior sessions detected on current branch |
+| `tracking-a-project` | User explicitly asks to track work or runs `start-project` |
+| `generating-takeaways` | Project is marked complete |
+| `searching-past-knowledge` | Starting significant new work |
+
+### Agents
+
+- **briefing-writer** — Synthesizes resume briefings from session metadata, git state, and plan files.
+- **takeaway-writer** — Generates structured post-mortems from completed project history.
+
+### Data Storage
+
+All plugin data lives at `~/.claude/session-manager/`:
+
+```
+config.json                       # Tracked repos, groups, preferences
+knowledge-index.json              # Cross-repo takeaway index
+repos/
+  {slug}/
+    sessions/{id}.json            # Per-session snapshot
+    projects/{slug}.json          # Project tracking
+    projects/{slug}.takeaway.md   # Post-mortem
+    briefings/latest.md           # Resume briefing
+```
+
+The plugin reads Claude Code's data (transcripts, plans, tasks) but never modifies it.
+
+## Compatibility
+
+- Works alongside other Claude Code plugins
+- No hook conflicts — uses SessionStart/Stop/SessionEnd only
+- No external dependencies beyond Node.js built-ins
 
 ## License
 

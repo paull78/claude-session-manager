@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2] — 2026-04-01
+
+### Changed
+- Rewrote README with logical user-journey structure: Core Concepts → Workflow → Dashboard → Reference
+- Documentation now follows the natural flow: sessions (automatic) → projects (manual) → knowledge (takeaways)
+- Consolidated scattered examples into a single Workflow section
+- Moved internals (hooks, skills, agents) to end of README
+
 ## [1.2.1] — 2026-03-31
 
 ### Changed

@@ -1,6 +1,6 @@
 {
   "name": "claude-session-manager",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Track and resume parallel development sessions across repo copies",
   "author": { "name": "paull78" },
   "homepage": "https://github.com/paull78/claude-session-manager"
